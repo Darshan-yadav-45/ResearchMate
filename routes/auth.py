@@ -141,7 +141,7 @@ def register():
             username=username,
             email=email,
             full_name=full_name or "Academic Researcher",
-            institution=institution or "AICTE - IBM SkillsBuild",
+            institution=institution or "Institute of Advanced Research",
             role="researcher",
         )
         new_user.set_password(password)
@@ -173,3 +173,4 @@ def logout():
     logout_user()
     flash("You have been successfully logged out.", "info")
     return redirect(url_for("auth.login"))
+

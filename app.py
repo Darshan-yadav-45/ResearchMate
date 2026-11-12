@@ -109,9 +109,9 @@ def create_app(config_class=Config):
         if User.query.count() == 0:
             demo_user = User(
                 username="researcher",
-                email="researcher@ibm.aicte.edu",
+                email="researcher@researchmate.org",
                 full_name="Dr. Alex Rivera",
-                institution="AICTE - IBM SkillsBuild",
+                institution="Institute of Advanced Research",
                 role="Lead Researcher",
             )
             demo_user.set_password("Password123!")

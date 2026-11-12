@@ -39,7 +39,7 @@ class Config:
 
     # Academic Search API settings
     OPENALEX_API_URL = "https://api.openalex.org/works"
-    USER_AGENT = "ResearchMate/1.0 (academic-research-agent@ibm-aicte.edu)"
+    USER_AGENT = "ResearchMate/1.0 (academic-research-agent@researchmate.org)"
 
     @classmethod
     def is_watsonx_configured(cls) -> bool:

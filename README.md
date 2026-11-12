@@ -1,5 +1,5 @@
 # ResearchMate – AI-Powered Research Agent
-### AICTE–IBM SkillsBuild Problem Statement No. 1: Research Agent
+### Intelligent Academic Research Platform Powered by IBM Granite & watsonx.ai
 
 [![Python](https://img.shields.io/badge/Python-3.12-blue.svg)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Framework-Flask%203.1-black.svg)](https://flask.palletsprojects.com/)
@@ -14,7 +14,7 @@
 
 **ResearchMate** is a modern, modular, full-stack AI research assistant engineered to empower students, academic researchers, and scholars to conduct literature reviews, explore empirical research gaps, summarize scholarly papers, and generate structured 13-section research drafts with rigorous academic integrity.
 
-Built for **AICTE–IBM SkillsBuild Problem Statement No. 1: Research Agent**, ResearchMate natively integrates **IBM Granite foundation models** via **IBM watsonx.ai** and incorporates a local, high-precision **Retrieval-Augmented Generation (RAG)** pipeline.
+ResearchMate natively integrates **IBM Granite foundation models** via **IBM watsonx.ai** and incorporates a local, high-precision **Retrieval-Augmented Generation (RAG)** pipeline.
 
 ### Core Objectives:
 1. **Deconstruct Natural-Language Queries:** Automatically formulate academic sub-questions, extract primary/secondary keywords, and assemble Boolean search strings.
@@ -197,7 +197,7 @@ ResearchMate connects directly to **IBM Granite** on **IBM watsonx.ai**.
 ### Step 1: Obtain IBM Cloud Credentials
 1. Create a free IBM Cloud Lite account at [cloud.ibm.com/registration](https://cloud.ibm.com/registration).
 2. Navigate to the watsonx console at [dataplatform.cloud.ibm.com](https://dataplatform.cloud.ibm.com/).
-3. Create a Project (e.g. `ResearchMate-AICTE`).
+3. Create a Project (e.g. `ResearchMate-Project`).
 4. Copy your **Project ID** from **Manage > General > Details**.
 5. Create an IBM Cloud IAM API Key at [cloud.ibm.com/iam/apikeys](https://cloud.ibm.com/iam/apikeys).
 
@@ -267,7 +267,7 @@ http://127.0.0.1:5000
 
 ### Default Academic Researcher Login Credentials:
 You can log in with the pre-seeded account or click the **"Quick Demo Login"** button on the login screen:
-- **Username:** `researcher` *(or `researcher@ibm.aicte.edu`)*
+- **Username:** `researcher` *(or `researcher@researchmate.org`)*
 - **Password:** `Password123!`
 - *Or register a new researcher account at `/register`.*
 
@@ -403,11 +403,12 @@ ResearchMate/
 
 ## 10. Demonstration & Evaluation Checklist
 
-Use this checklist during your project demonstration for the AICTE–IBM SkillsBuild review:
+Use this checklist during your project demonstration and evaluation:
 
 - [x] **IBM Granite Integration**: Dedicated AI service module calling `ibm/granite-13b-chat-v2` via IBM Cloud IAM OAuth2.
 - [x] **Environment Security**: No API keys exposed in frontend or GitHub (`.gitignore` + `.env.example`).
 - [x] **Clear Setup Feedback**: Informative UI banner and Settings modal when credentials are not yet entered.
+- [x] **User Authentication**: Secure researcher sign-in, registration, and session protection with Flask-Login.
 - [x] **Module 1**: Natural-language question formulation, keywords, sub-questions, and Boolean queries.
 - [x] **Module 2**: Genuine OpenAlex academic paper retrieval with filtering by year and DOI links.
 - [x] **Module 3**: PDF upload via PyMuPDF with page-level text extraction and 6-section Granite summaries.
@@ -416,7 +417,7 @@ Use this checklist during your project demonstration for the AICTE–IBM SkillsB
 - [x] **Module 6**: Multi-format citation management with APA 7th, IEEE, BibTeX, and RIS export.
 - [x] **Module 7**: 13-section IMRaD research paper draft with `[ORIGINAL RESEARCH REQUIRED]` placeholders.
 - [x] **RAG Pipeline**: Text chunking, cosine vector similarity, grounded answers, and source citations.
-- [x] **Automated Testing**: 19 automated unit and integration tests passing with `pytest`.
+- [x] **Automated Testing**: 27 automated unit and integration tests passing with `pytest`.
 
 ---
 
@@ -440,9 +441,8 @@ Use this checklist during your project demonstration for the AICTE–IBM SkillsB
 - **IBM Cloud IAM API Key Management:** [https://cloud.ibm.com/docs/account?topic=account-userapikey](https://cloud.ibm.com/docs/account?topic=account-userapikey)
 - **OpenAlex Academic API:** [https://docs.openalex.org/](https://docs.openalex.org/)
 - **PyMuPDF Documentation:** [https://pymupdf.readthedocs.io/](https://pymupdf.readthedocs.io/)
-- **AICTE–IBM SkillsBuild:** [https://skillsbuild.org/](https://skillsbuild.org/)
 
 ---
 
-*Developed for the AICTE–IBM SkillsBuild Project Demonstration | Problem Statement No. 1: Research Agent*
+*ResearchMate – AI-Powered Research Agent | Academic Literature & Discovery Platform*
 

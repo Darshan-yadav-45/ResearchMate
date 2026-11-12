@@ -94,3 +94,4 @@ def test_logout_flow(auth_client):
     res = auth_client.get("/logout", follow_redirects=True)
     assert res.status_code == 200
     assert b"Sign In to Workspace" in res.data
+

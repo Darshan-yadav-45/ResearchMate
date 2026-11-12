@@ -17,7 +17,7 @@ class User(db.Model, UserMixin):
     email = db.Column(db.String(120), unique=True, nullable=False, index=True)
     password_hash = db.Column(db.String(255), nullable=False)
     full_name = db.Column(db.String(120), default="Academic Researcher")
-    institution = db.Column(db.String(200), default="AICTE - IBM SkillsBuild")
+    institution = db.Column(db.String(200), default="Institute of Advanced Research")
     role = db.Column(db.String(50), default="researcher")
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
