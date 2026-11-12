@@ -1,0 +1,406 @@
+{% extends "base.html" %}
+
+{% block title %}Analyze PDF – ResearchMate{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">Module 3: Research Paper PDF Analyzer</h1>
+  <p class="page-subtitle">Extract text with PyMuPDF and generate structured academic summaries using IBM Granite.</p>
+</div>
+
+<div class="row g-4">
+  <!-- Left Column: Upload Dropzone & Paper List -->
+  <div class="col-lg-5">
+    <!-- Upload Dropzone Card -->
+    <div class="rm-card mb-4">
+      <div class="rm-card-header">
+        <h2 class="rm-card-title">
+          <i class="bi bi-cloud-arrow-up-fill text-primary"></i>
+          <span>Upload PDF Document</span>
+        </h2>
+      </div>
+      <div class="rm-card-body">
+        <div id="upload-dropzone" class="upload-dropzone">
+          <i class="bi bi-file-earmark-pdf upload-icon d-block"></i>
+          <h6 class="fw-bold text-dark mb-1">Drag & Drop Research PDF here</h6>
+          <p class="text-muted small mb-3">or click to browse your local computer (Max: 32MB)</p>
+          <input type="file" id="pdf-file-input" accept=".pdf" class="d-none">
+          <button type="button" id="browse-file-btn" class="btn btn-outline-primary btn-sm px-3 fw-semibold">
+            <i class="bi bi-folder2-open me-1"></i> Choose PDF File
+          </button>
+        </div>
+
+        <div id="upload-progress-container" class="mt-3 d-none">
+          <div class="progress" style="height: 6px;">
+            <div id="upload-progress-bar" class="progress-bar progress-bar-striped progress-bar-animated bg-primary" style="width: 100%;"></div>
+          </div>
+          <div class="text-center text-muted small mt-2">
+            Extracting text and indexing document chunks with PyMuPDF...
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Uploaded Papers Library -->
+    <div class="rm-card">
+      <div class="rm-card-header d-flex justify-content-between align-items-center">
+        <h2 class="rm-card-title">
+          <i class="bi bi-collection-fill text-secondary"></i>
+          <span>Papers in Library ({{ papers|length }})</span>
+        </h2>
+      </div>
+      <div class="rm-card-body p-0" style="max-height: 480px; overflow-y: auto;">
+        <div class="list-group list-group-flush" id="papers-list-group">
+          {% for p in papers %}
+          <div class="list-group-item list-group-item-action p-3 d-flex justify-content-between align-items-start gap-2 paper-item" data-id="{{ p.id }}">
+            <div class="flex-grow-1" style="cursor: pointer;" onclick="loadPaperDetails({{ p.id }})">
+              <h6 class="fw-bold mb-1 text-dark" style="font-size: 0.92rem;">{{ p.title }}</h6>
+              <div class="text-muted small">
+                <span>{{ p.authors or 'Unknown' }}</span>
+                {% if p.year %}<span class="mx-1">•</span><span>{{ p.year }}</span>{% endif %}
+                <span class="mx-1">•</span>
+                <span class="badge bg-light text-dark border">{{ p.source }}</span>
+                {% if p.page_count %}<span class="mx-1">•</span><span>{{ p.page_count }} pages</span>{% endif %}
+              </div>
+            </div>
+            <div class="d-flex align-items-center gap-1">
+              {% if p.summary %}
+                <span class="badge bg-success-subtle text-success border border-success-subtle" title="Analyzed with Granite">
+                  <i class="bi bi-check2"></i>
+                </span>
+              {% endif %}
+              <button class="btn btn-sm btn-link text-danger p-0 ms-1 delete-paper-btn" data-id="{{ p.id }}" title="Delete paper">
+                <i class="bi bi-trash"></i>
+              </button>
+            </div>
+          </div>
+          {% else %}
+          <div class="p-4 text-center text-muted small">
+            No papers in library yet. Upload a PDF above.
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right Column: Structured Summary Display -->
+  <div class="col-lg-7">
+    <div class="rm-card position-relative" style="min-height: 600px;">
+      <div class="rm-card-header d-flex justify-content-between align-items-center">
+        <h2 class="rm-card-title">
+          <i class="bi bi-card-checklist text-primary"></i>
+          <span>IBM Granite Academic Summary</span>
+        </h2>
+        <div id="summary-actions" class="d-none d-flex gap-2">
+          <button id="copy-summary-btn" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-clipboard"></i> Copy
+          </button>
+        </div>
+      </div>
+
+      <!-- Loading Overlay -->
+      <div id="summary-loading" class="loading-spinner-overlay">
+        <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;"></div>
+        <h5 class="fw-bold mt-3 text-dark">Analyzing with IBM Granite</h5>
+        <p class="text-muted small">Synthesizing objectives, methodology, findings, and limitations...</p>
+      </div>
+
+      <!-- Empty State -->
+      <div id="summary-empty" class="rm-card-body text-center py-5">
+        <i class="bi bi-file-earmark-text text-muted" style="font-size: 4rem;"></i>
+        <h5 class="mt-3 text-secondary">No Paper Selected</h5>
+        <p class="text-muted" style="max-width: 420px; margin: 0 auto; font-size: 0.9rem;">
+          Select a paper from the list on the left, or upload a new PDF to extract text and generate an IBM Granite 6-section academic summary.
+        </p>
+      </div>
+
+      <!-- Selected Paper Header & Summary Display -->
+      <div id="summary-display" class="rm-card-body d-none">
+        <div class="border-bottom pb-3 mb-4">
+          <h4 id="display-paper-title" class="fw-bold text-dark mb-1"></h4>
+          <div id="display-paper-meta" class="text-muted small mb-3"></div>
+          <button id="run-granite-summary-btn" class="btn btn-primary btn-sm fw-semibold shadow-sm">
+            <i class="bi bi-cpu-fill me-1"></i> Generate IBM Granite Summary
+          </button>
+        </div>
+
+        <div id="summary-sections-container">
+          <!-- 6 Structured Sections -->
+          <div class="accordion" id="summaryAccordion">
+            <!-- 1. Objectives -->
+            <div class="accordion-item mb-2 border rounded">
+              <h2 class="accordion-header" id="headingObj">
+                <button class="accordion-button fw-bold text-dark" type="button" data-bs-toggle="collapse" data-bs-target="#collapseObj">
+                  <i class="bi bi-bullseye text-primary me-2"></i> 1. Research Objectives
+                </button>
+              </h2>
+              <div id="collapseObj" class="accordion-collapse collapse show">
+                <div id="sec-objectives" class="accordion-body text-secondary" style="font-size: 0.93rem; line-height: 1.6;"></div>
+              </div>
+            </div>
+
+            <!-- 2. Abstract Summary -->
+            <div class="accordion-item mb-2 border rounded">
+              <h2 class="accordion-header" id="headingAbs">
+                <button class="accordion-button fw-bold text-dark" type="button" data-bs-toggle="collapse" data-bs-target="#collapseAbs">
+                  <i class="bi bi-file-text text-info me-2"></i> 2. Abstract Summary
+                </button>
+              </h2>
+              <div id="collapseAbs" class="accordion-collapse collapse show">
+                <div id="sec-abstract" class="accordion-body text-secondary" style="font-size: 0.93rem; line-height: 1.6;"></div>
+              </div>
+            </div>
+
+            <!-- 3. Methodology -->
+            <div class="accordion-item mb-2 border rounded">
+              <h2 class="accordion-header" id="headingMeth">
+                <button class="accordion-button fw-bold text-dark" type="button" data-bs-toggle="collapse" data-bs-target="#collapseMeth">
+                  <i class="bi bi-gear-wide-connected text-warning me-2"></i> 3. Methodology & System Design
+                </button>
+              </h2>
+              <div id="collapseMeth" class="accordion-collapse collapse show">
+                <div id="sec-methodology" class="accordion-body text-secondary" style="font-size: 0.93rem; line-height: 1.6;"></div>
+              </div>
+            </div>
+
+            <!-- 4. Key Findings -->
+            <div class="accordion-item mb-2 border rounded">
+              <h2 class="accordion-header" id="headingFind">
+                <button class="accordion-button fw-bold text-dark" type="button" data-bs-toggle="collapse" data-bs-target="#collapseFind">
+                  <i class="bi bi-graph-up-arrow text-success me-2"></i> 4. Key Findings & Empirical Results
+                </button>
+              </h2>
+              <div id="collapseFind" class="accordion-collapse collapse show">
+                <div id="sec-findings" class="accordion-body text-secondary" style="font-size: 0.93rem; line-height: 1.6;"></div>
+              </div>
+            </div>
+
+            <!-- 5. Limitations -->
+            <div class="accordion-item mb-2 border rounded">
+              <h2 class="accordion-header" id="headingLim">
+                <button class="accordion-button fw-bold text-dark" type="button" data-bs-toggle="collapse" data-bs-target="#collapseLim">
+                  <i class="bi bi-exclamation-octagon text-danger me-2"></i> 5. Limitations & Threats to Validity
+                </button>
+              </h2>
+              <div id="collapseLim" class="accordion-collapse collapse show">
+                <div id="sec-limitations" class="accordion-body text-secondary" style="font-size: 0.93rem; line-height: 1.6;"></div>
+              </div>
+            </div>
+
+            <!-- 6. Future Directions -->
+            <div class="accordion-item mb-2 border rounded">
+              <h2 class="accordion-header" id="headingFut">
+                <button class="accordion-button fw-bold text-dark" type="button" data-bs-toggle="collapse" data-bs-target="#collapseFut">
+                  <i class="bi bi-arrow-right-circle text-primary me-2"></i> 6. Future Research Directions
+                </button>
+              </h2>
+              <div id="collapseFut" class="accordion-collapse collapse show">
+                <div id="sec-future" class="accordion-body text-secondary" style="font-size: 0.93rem; line-height: 1.6;"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let activePaperId = null;
+
+// Drag and drop setup
+const dropzone = document.getElementById("upload-dropzone");
+const fileInput = document.getElementById("pdf-file-input");
+const browseBtn = document.getElementById("browse-file-btn");
+
+browseBtn.addEventListener("click", () => fileInput.click());
+dropzone.addEventListener("click", () => fileInput.click());
+
+["dragenter", "dragover"].forEach(evt => {
+  dropzone.addEventListener(evt, (e) => {
+    e.preventDefault();
+    dropzone.classList.add("dragover");
+  });
+});
+
+["dragleave", "drop"].forEach(evt => {
+  dropzone.addEventListener(evt, (e) => {
+    e.preventDefault();
+    dropzone.classList.remove("dragover");
+  });
+});
+
+dropzone.addEventListener("drop", (e) => {
+  const files = e.dataTransfer.files;
+  if (files.length > 0 && files[0].name.toLowerCase().endsWith(".pdf")) {
+    handleFileUpload(files[0]);
+  } else {
+    showToast("Please drop a valid PDF file", "warning");
+  }
+});
+
+fileInput.addEventListener("change", () => {
+  if (fileInput.files.length > 0) {
+    handleFileUpload(fileInput.files[0]);
+  }
+});
+
+async function handleFileUpload(file) {
+  const progress = document.getElementById("upload-progress-container");
+  progress.classList.remove("d-none");
+
+  const formData = new FormData();
+  formData.append("file", file);
+
+  try {
+    const res = await fetch("/api/upload-pdf", {
+      method: "POST",
+      body: formData
+    });
+    const data = await res.json();
+    progress.classList.add("d-none");
+
+    if (!data.success) {
+      showToast(data.error || "Upload failed", "danger");
+      return;
+    }
+
+    showToast(`Uploaded successfully! Extracted ${data.stats.pages} pages and created ${data.stats.chunks_created} chunks.`, "success");
+    // Reload page to update list or auto-load paper
+    setTimeout(() => {
+      window.location.reload();
+    }, 1200);
+
+  } catch (err) {
+    progress.classList.add("d-none");
+    showToast("Upload error: " + err, "danger");
+  }
+}
+
+// Load Paper Details
+async function loadPaperDetails(paperId) {
+  activePaperId = paperId;
+  const empty = document.getElementById("summary-empty");
+  const display = document.getElementById("summary-display");
+  const actions = document.getElementById("summary-actions");
+  const titleEl = document.getElementById("display-paper-title");
+  const metaEl = document.getElementById("display-paper-meta");
+  const summarizeBtn = document.getElementById("run-granite-summary-btn");
+
+  try {
+    const res = await fetch(`/api/papers/${paperId}`);
+    const data = await res.json();
+    if (!data.success) return;
+
+    const paper = data.paper;
+    empty.classList.add("d-none");
+    display.classList.remove("d-none");
+    actions.classList.remove("d-none");
+
+    titleEl.innerText = paper.title;
+    metaEl.innerHTML = `
+      <span><i class="bi bi-people-fill me-1"></i> ${paper.authors}</span>
+      <span class="mx-2">•</span>
+      <span>${paper.year || 'N/A'}</span>
+      <span class="mx-2">•</span>
+      <span>${paper.page_count} pages</span>
+      <span class="mx-2">•</span>
+      <span>${paper.chunks_count} chunks indexed in RAG</span>
+    `;
+
+    // If summary exists, populate sections
+    if (paper.summary) {
+      populateSummarySections(paper.summary);
+      summarizeBtn.className = "btn btn-outline-primary btn-sm";
+      summarizeBtn.innerHTML = '<i class="bi bi-arrow-clockwise me-1"></i> Re-generate Summary';
+    } else {
+      clearSummarySections("Summary not generated yet. Click 'Generate IBM Granite Summary' above.");
+      summarizeBtn.className = "btn btn-primary btn-sm fw-semibold shadow-sm";
+      summarizeBtn.innerHTML = '<i class="bi bi-cpu-fill me-1"></i> Generate IBM Granite Summary';
+    }
+
+  } catch (err) {
+    showToast("Error loading paper details: " + err, "danger");
+  }
+}
+
+function populateSummarySections(s) {
+  document.getElementById("sec-objectives").innerHTML = renderMarkdown(s.research_objectives || "Not specified");
+  document.getElementById("sec-abstract").innerHTML = renderMarkdown(s.abstract_summary || "Not specified");
+  document.getElementById("sec-methodology").innerHTML = renderMarkdown(s.methodology || "Not specified");
+  document.getElementById("sec-findings").innerHTML = renderMarkdown(s.key_findings || "Not specified");
+  document.getElementById("sec-limitations").innerHTML = renderMarkdown(s.limitations || "Not specified");
+  document.getElementById("sec-future").innerHTML = renderMarkdown(s.future_directions || "Not specified");
+}
+
+function clearSummarySections(placeholderText) {
+  ["sec-objectives", "sec-abstract", "sec-methodology", "sec-findings", "sec-limitations", "sec-future"].forEach(id => {
+    document.getElementById(id).innerHTML = `<span class="text-muted fst-italic">${placeholderText}</span>`;
+  });
+}
+
+// Generate Granite Summary Button Click
+document.getElementById("run-granite-summary-btn").addEventListener("click", async function() {
+  if (!activePaperId) return;
+
+  const loading = document.getElementById("summary-loading");
+  loading.classList.add("show");
+  this.disabled = true;
+
+  try {
+    const res = await fetch(`/api/summarize-paper/${activePaperId}`, {
+      method: "POST"
+    });
+    const data = await res.json();
+    loading.classList.remove("show");
+    this.disabled = false;
+
+    if (!data.success) {
+      if (data.setup_required) {
+        showToast(data.error, "warning");
+        clearSummarySections(data.error + " Configure credentials in Settings.");
+      } else {
+        showToast(data.error || "Summarization failed", "danger");
+      }
+      return;
+    }
+
+    populateSummarySections(data.summary);
+    showToast("Summary generated successfully with IBM Granite!", "success");
+
+  } catch (err) {
+    loading.classList.remove("show");
+    this.disabled = false;
+    showToast("Error generating summary: " + err, "danger");
+  }
+});
+
+// Delete Paper
+document.querySelectorAll(".delete-paper-btn").forEach(btn => {
+  btn.addEventListener("click", async function(e) {
+    e.stopPropagation();
+    if (!confirm("Are you sure you want to remove this paper and its indexed chunks?")) return;
+    const paperId = this.dataset.id;
+    try {
+      const res = await fetch(`/api/papers/${paperId}`, { method: "DELETE" });
+      const data = await res.json();
+      if (data.success) {
+        showToast("Paper removed from library", "success");
+        setTimeout(() => window.location.reload(), 800);
+      }
+    } catch (err) {
+      showToast("Error deleting paper: " + err, "danger");
+    }
+  });
+});
+
+// Copy Summary
+document.getElementById("copy-summary-btn").addEventListener("click", () => {
+  const container = document.getElementById("summary-sections-container");
+  copyToClipboard(container.innerText, "Structured summary copied to clipboard!");
+});
+</script>
+{% endblock %}

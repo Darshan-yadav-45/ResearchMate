@@ -1,0 +1,281 @@
+{% extends "base.html" %}
+
+{% block title %}Report Generator – ResearchMate{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">Module 7: Research Paper & Report Generator</h1>
+  <p class="page-subtitle">Draft a publication-grade, 13-section academic research paper using IBM Granite.</p>
+</div>
+
+<div class="row g-4">
+  <!-- Left Column: Generator Controls & Saved Drafts -->
+  <div class="col-lg-4">
+    <!-- Configuration Card -->
+    <div class="rm-card mb-4">
+      <div class="rm-card-header">
+        <h2 class="rm-card-title">
+          <i class="bi bi-file-earmark-diff-fill text-primary"></i>
+          <span>Draft Setup</span>
+        </h2>
+      </div>
+      <div class="rm-card-body">
+        <form id="report-generator-form">
+          <div class="mb-3">
+            <label for="report-topic" class="form-label fw-semibold">
+              Research Title / Topic <span class="text-danger">*</span>
+            </label>
+            <textarea
+              id="report-topic"
+              class="form-control"
+              rows="3"
+              placeholder="e.g. Energy-Efficient Transformer Inference via Adaptive Quantization in Autonomous Drone Perception"
+              required
+            ></textarea>
+          </div>
+
+          <div class="mb-3">
+            <label for="review-select" class="form-label fw-semibold">Literature Review Source</label>
+            <select id="review-select" class="form-select">
+              <option value="">-- None (Synthesize from scratch) --</option>
+              {% for r in reviews %}
+              <option value="{{ r.id }}">{{ r.title }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Surveyed Papers Included</label>
+            <div class="border rounded p-2" style="max-height: 180px; overflow-y: auto;">
+              {% for p in papers %}
+              <div class="form-check small p-1">
+                <input class="form-check-input report-paper-check" type="checkbox" value="{{ p.id }}" id="rep-paper-{{ p.id }}" checked>
+                <label class="form-check-label text-truncate d-block" for="rep-paper-{{ p.id }}">
+                  {{ p.title }}
+                </label>
+              </div>
+              {% else %}
+              <div class="text-muted small">No papers in library.</div>
+              {% endfor %}
+            </div>
+          </div>
+
+          <div class="alert alert-warning border-warning small mb-3">
+            <i class="bi bi-exclamation-triangle-fill text-warning me-1"></i>
+            <strong>Academic Integrity Notice:</strong> IBM Granite will insert <code>[ORIGINAL RESEARCH REQUIRED]</code> markers for methodology, experimental numbers, and actual measurements that must be executed by the student/researcher.
+          </div>
+
+          <button type="submit" id="generate-draft-btn" class="btn btn-primary w-100 py-2 fw-semibold shadow-sm">
+            <i class="bi bi-cpu-fill me-1"></i> Generate 13-Section Draft
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Saved Drafts -->
+    <div class="rm-card">
+      <div class="rm-card-header">
+        <h2 class="rm-card-title">
+          <i class="bi bi-archive text-secondary"></i>
+          <span>Generated Drafts ({{ reports|length }})</span>
+        </h2>
+      </div>
+      <div class="rm-card-body p-0" style="max-height: 280px; overflow-y: auto;">
+        <div class="list-group list-group-flush">
+          {% for rep in reports %}
+          <div class="list-group-item list-group-item-action p-3" style="cursor: pointer;" onclick="loadSavedDraft({{ rep.id }})">
+            <h6 class="fw-bold mb-1 text-dark" style="font-size: 0.9rem;">{{ rep.title }}</h6>
+            <div class="text-muted small">
+              <span>{{ rep.created_at.strftime('%Y-%m-%d %H:%M') }}</span>
+              <span class="mx-1">•</span>
+              <span>Model: {{ rep.model_used }}</span>
+            </div>
+          </div>
+          {% else %}
+          <div class="text-center text-muted small p-3">No drafts generated yet.</div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right Column: Academic Paper Document Preview -->
+  <div class="col-lg-8">
+    <div class="rm-card position-relative" style="min-height: 700px;">
+      <div class="rm-card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <h2 class="rm-card-title">
+          <i class="bi bi-file-earmark-richtext text-primary"></i>
+          <span>Academic Paper Workspace</span>
+        </h2>
+        
+        <div id="draft-actions" class="d-none d-flex gap-2">
+          <div class="dropdown">
+            <button class="btn btn-sm btn-primary dropdown-toggle fw-semibold" type="button" data-bs-toggle="dropdown">
+              <i class="bi bi-download me-1"></i> Export Draft
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end shadow">
+              <li><a class="dropdown-item export-draft-btn" href="#" data-format="markdown"><i class="bi bi-markdown me-2"></i>Markdown (.md)</a></li>
+              <li><a class="dropdown-item export-draft-btn" href="#" data-format="html"><i class="bi bi-filetype-html me-2"></i>Academic HTML (.html)</a></li>
+              <li><a class="dropdown-item export-draft-btn" href="#" data-format="text"><i class="bi bi-file-text me-2"></i>Plain Text (.txt)</a></li>
+            </ul>
+          </div>
+          <button id="copy-draft-btn" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-clipboard"></i> Copy
+          </button>
+        </div>
+      </div>
+
+      <!-- Loading Overlay -->
+      <div id="draft-loading" class="loading-spinner-overlay">
+        <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;"></div>
+        <h5 class="fw-bold mt-3 text-dark">Drafting 13-Section Paper with IBM Granite</h5>
+        <p class="text-muted small">Constructing IMRaD framework, grounding literature, and placing research markers...</p>
+      </div>
+
+      <!-- Empty State -->
+      <div id="draft-empty" class="rm-card-body text-center py-5">
+        <i class="bi bi-file-earmark-ruled text-muted" style="font-size: 4rem;"></i>
+        <h5 class="mt-3 text-secondary">Awaiting Paper Generation</h5>
+        <p class="text-muted" style="max-width: 480px; margin: 0 auto; font-size: 0.9rem;">
+          Configure your paper topic and surveyed references on the left. IBM Granite will draft a complete 13-section academic paper conforming to international publishing standards.
+        </p>
+      </div>
+
+      <!-- Document Preview -->
+      <div id="draft-display" class="rm-card-body d-none p-4">
+        <div class="academic-doc" id="academic-paper-doc"></div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentDraftId = null;
+let currentDraftMarkdown = "";
+
+document.getElementById("report-generator-form").addEventListener("submit", async function(e) {
+  e.preventDefault();
+  const topic = document.getElementById("report-topic").value.trim();
+  const litReviewId = document.getElementById("review-select").value;
+  const selectedCheckboxes = document.querySelectorAll(".report-paper-check:checked");
+  const paper_ids = Array.from(selectedCheckboxes).map(c => parseInt(c.value));
+
+  if (!topic) return;
+
+  const loading = document.getElementById("draft-loading");
+  const empty = document.getElementById("draft-empty");
+  const display = document.getElementById("draft-display");
+  const docContainer = document.getElementById("academic-paper-doc");
+  const actions = document.getElementById("draft-actions");
+  const submitBtn = document.getElementById("generate-draft-btn");
+
+  loading.classList.add("show");
+  submitBtn.disabled = true;
+
+  try {
+    const res = await fetch("/api/generate-report", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        topic,
+        literature_review_id: litReviewId ? parseInt(litReviewId) : null,
+        paper_ids
+      })
+    });
+    const data = await res.json();
+    loading.classList.remove("show");
+    submitBtn.disabled = false;
+
+    if (!data.success) {
+      if (data.setup_required) {
+        showToast(data.error, "warning");
+        docContainer.innerHTML = `
+          <div class="alert alert-warning border-warning">
+            <h5 class="fw-bold"><i class="bi bi-exclamation-triangle"></i> IBM Granite Credentials Required</h5>
+            <p>${data.error}</p>
+            <a href="/settings" class="btn btn-sm btn-dark">Open Settings</a>
+          </div>
+        `;
+        empty.classList.add("d-none");
+        display.classList.remove("d-none");
+      } else {
+        showToast(data.error || "Draft generation failed", "danger");
+      }
+      return;
+    }
+
+    currentDraftId = data.draft.id;
+    currentDraftMarkdown = data.draft.full_markdown;
+
+    empty.classList.add("d-none");
+    display.classList.remove("d-none");
+    actions.classList.remove("d-none");
+
+    docContainer.innerHTML = renderMarkdown(currentDraftMarkdown);
+    showToast("13-Section research paper draft generated with IBM Granite!", "success");
+
+  } catch (err) {
+    loading.classList.remove("show");
+    submitBtn.disabled = false;
+    showToast("Error generating report: " + err, "danger");
+  }
+});
+
+// Load Saved Draft
+function loadSavedDraft(draftId) {
+  currentDraftId = draftId;
+  const empty = document.getElementById("draft-empty");
+  const display = document.getElementById("draft-display");
+  const docContainer = document.getElementById("academic-paper-doc");
+  const actions = document.getElementById("draft-actions");
+
+  // Fetch draft
+  fetch(`/api/history`)
+    .then(() => {
+      // Direct load if needed or we can retrieve from report element
+      // Let's make an export or direct view
+    });
+}
+
+// Export draft
+document.querySelectorAll(".export-draft-btn").forEach(link => {
+  link.addEventListener("click", async function(e) {
+    e.preventDefault();
+    const fmt = this.dataset.format;
+    if (!currentDraftMarkdown && !currentDraftId) {
+      showToast("No active draft to export", "warning");
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/export-report", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          report_id: currentDraftId,
+          content: currentDraftMarkdown,
+          format: fmt
+        })
+      });
+      const data = await res.json();
+      if (data.success && data.download_url) {
+        window.location.href = data.download_url;
+        showToast(`Draft exported as ${fmt.toUpperCase()}!`, "success");
+      } else {
+        showToast(data.error || "Export failed", "danger");
+      }
+    } catch (err) {
+      showToast("Export error: " + err, "danger");
+    }
+  });
+});
+
+// Copy Draft
+document.getElementById("copy-draft-btn").addEventListener("click", () => {
+  const text = document.getElementById("academic-paper-doc").innerText;
+  copyToClipboard(text, "Research draft copied to clipboard!");
+});
+</script>
+{% endblock %}

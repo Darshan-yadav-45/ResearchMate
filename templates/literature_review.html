@@ -1,0 +1,218 @@
+{% extends "base.html" %}
+
+{% block title %}Literature Review – ResearchMate{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">Module 4: Literature Review Assistant</h1>
+  <p class="page-subtitle">Synthesize multiple surveyed papers into a comparative matrix and academic literature review draft.</p>
+</div>
+
+<div class="row g-4">
+  <!-- Left Column: Topic & Paper Selection -->
+  <div class="col-lg-5">
+    <div class="rm-card">
+      <div class="rm-card-header">
+        <h2 class="rm-card-title">
+          <i class="bi bi-book-half text-primary"></i>
+          <span>Literature Synthesis Setup</span>
+        </h2>
+      </div>
+      <div class="rm-card-body">
+        <form id="lit-review-form">
+          <div class="mb-3">
+            <label for="review-topic" class="form-label fw-semibold">
+              Review Topic / Central Theme <span class="text-danger">*</span>
+            </label>
+            <textarea
+              id="review-topic"
+              class="form-control"
+              rows="3"
+              placeholder="e.g. Comparative analysis of model compression and quantization techniques in edge computing"
+              required
+            ></textarea>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold d-flex justify-content-between align-items-center">
+              <span>Select Papers to Synthesize <span class="text-danger">*</span></span>
+              <button type="button" id="select-all-papers-btn" class="btn btn-sm btn-link p-0 text-decoration-none">Select All</button>
+            </label>
+            <div class="border rounded p-2" style="max-height: 260px; overflow-y: auto;">
+              {% for p in papers %}
+              <div class="form-check p-2 border-bottom">
+                <input class="form-check-input paper-checkbox" type="checkbox" value="{{ p.id }}" id="paper-check-{{ p.id }}">
+                <label class="form-check-label text-dark fw-medium" for="paper-check-{{ p.id }}" style="font-size: 0.88rem; cursor: pointer;">
+                  {{ p.title }}
+                  <span class="d-block text-muted small">
+                    {{ p.authors or 'Unknown' }} ({{ p.year or 'N/A' }})
+                    {% if p.summary %}<span class="badge bg-success-subtle text-success ms-1">Summarized</span>{% endif %}
+                  </span>
+                </label>
+              </div>
+              {% else %}
+              <div class="text-muted small p-3 text-center">
+                No papers in your library yet. <a href="{{ url_for('views.search_papers') }}">Search academic papers</a> or <a href="{{ url_for('views.analyze_pdf') }}">upload PDFs</a> first.
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+
+          <button type="submit" id="generate-review-btn" class="btn btn-primary w-100 py-2 fw-semibold shadow-sm">
+            <i class="bi bi-cpu-fill me-1"></i> Synthesize with IBM Granite
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Prior Literature Reviews -->
+    <div class="rm-card">
+      <div class="rm-card-header">
+        <h2 class="rm-card-title">
+          <i class="bi bi-clock-history text-secondary"></i>
+          <span>Saved Reviews ({{ reviews|length }})</span>
+        </h2>
+      </div>
+      <div class="rm-card-body p-0" style="max-height: 300px; overflow-y: auto;">
+        <div class="list-group list-group-flush">
+          {% for r in reviews %}
+          <div class="list-group-item list-group-item-action p-3" style="cursor: pointer;" onclick="displaySavedReview({{ r.id }})">
+            <h6 class="fw-bold mb-1 text-dark" style="font-size: 0.9rem;">{{ r.title }}</h6>
+            <div class="text-muted small">
+              <span>{{ r.created_at.strftime('%Y-%m-%d') }}</span>
+              <span class="mx-1">•</span>
+              <span>Model: {{ r.model_used }}</span>
+            </div>
+          </div>
+          {% else %}
+          <div class="text-center text-muted small p-3">No saved reviews yet.</div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right Column: Literature Review Output -->
+  <div class="col-lg-7">
+    <div class="rm-card position-relative" style="min-height: 600px;">
+      <div class="rm-card-header d-flex justify-content-between align-items-center">
+        <h2 class="rm-card-title">
+          <i class="bi bi-file-earmark-diff text-primary"></i>
+          <span>Literature Review Synthesis</span>
+        </h2>
+        <div id="review-actions" class="d-none d-flex gap-2">
+          <button id="copy-review-btn" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-clipboard"></i> Copy
+          </button>
+        </div>
+      </div>
+
+      <!-- Loading Overlay -->
+      <div id="review-loading" class="loading-spinner-overlay">
+        <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;"></div>
+        <h5 class="fw-bold mt-3 text-dark">Synthesizing Literature with IBM Granite</h5>
+        <p class="text-muted small">Cross-referencing papers, formulating matrix, and evaluating unsupported claims...</p>
+      </div>
+
+      <!-- Empty State -->
+      <div id="review-empty" class="rm-card-body text-center py-5">
+        <i class="bi bi-book text-muted" style="font-size: 4rem;"></i>
+        <h5 class="mt-3 text-secondary">Awaiting Synthesis Configuration</h5>
+        <p class="text-muted" style="max-width: 440px; margin: 0 auto; font-size: 0.9rem;">
+          Select research papers on the left, define your central theme, and generate a multi-paper comparative literature review with comparative tables and evidence critiques.
+        </p>
+      </div>
+
+      <!-- Review Display Area -->
+      <div id="review-display" class="rm-card-body d-none">
+        <div class="academic-doc">
+          <div id="review-content"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Select All Papers Toggle
+document.getElementById("select-all-papers-btn")?.addEventListener("click", function() {
+  const checkboxes = document.querySelectorAll(".paper-checkbox");
+  const allChecked = Array.from(checkboxes).every(c => c.checked);
+  checkboxes.forEach(c => c.checked = !allChecked);
+  this.innerText = allChecked ? "Select All" : "Deselect All";
+});
+
+// Form Submit
+document.getElementById("lit-review-form").addEventListener("submit", async function(e) {
+  e.preventDefault();
+  const topic = document.getElementById("review-topic").value.trim();
+  const selectedCheckboxes = document.querySelectorAll(".paper-checkbox:checked");
+  const paper_ids = Array.from(selectedCheckboxes).map(c => parseInt(c.value));
+
+  if (!topic) return;
+  if (paper_ids.length === 0) {
+    showToast("Please select at least one paper to synthesize", "warning");
+    return;
+  }
+
+  const loading = document.getElementById("review-loading");
+  const empty = document.getElementById("review-empty");
+  const display = document.getElementById("review-display");
+  const contentEl = document.getElementById("review-content");
+  const actions = document.getElementById("review-actions");
+  const submitBtn = document.getElementById("generate-review-btn");
+
+  loading.classList.add("show");
+  submitBtn.disabled = true;
+
+  try {
+    const res = await fetch("/api/literature-review", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ topic, paper_ids })
+    });
+    const data = await res.json();
+    loading.classList.remove("show");
+    submitBtn.disabled = false;
+
+    if (!data.success) {
+      if (data.setup_required) {
+        showToast(data.error, "warning");
+        contentEl.innerHTML = `
+          <div class="alert alert-warning border-warning">
+            <h5 class="fw-bold"><i class="bi bi-exclamation-triangle"></i> IBM Granite Credentials Required</h5>
+            <p>${data.error}</p>
+            <a href="/settings" class="btn btn-sm btn-dark">Open Settings</a>
+          </div>
+        `;
+        empty.classList.add("d-none");
+        display.classList.remove("d-none");
+      } else {
+        showToast(data.error || "Literature review generation failed", "danger");
+      }
+      return;
+    }
+
+    empty.classList.add("d-none");
+    display.classList.remove("d-none");
+    actions.classList.remove("d-none");
+
+    contentEl.innerHTML = renderMarkdown(data.review.synthesized_review);
+    showToast("Literature review synthesized successfully with IBM Granite!", "success");
+
+  } catch (err) {
+    loading.classList.remove("show");
+    submitBtn.disabled = false;
+    showToast("Error generating literature review: " + err, "danger");
+  }
+});
+
+// Copy Review Text
+document.getElementById("copy-review-btn").addEventListener("click", () => {
+  const text = document.getElementById("review-content").innerText;
+  copyToClipboard(text, "Literature review draft copied to clipboard!");
+});
+</script>
+{% endblock %}

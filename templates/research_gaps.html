@@ -1,0 +1,191 @@
+{% extends "base.html" %}
+
+{% block title %}Research Gaps & Hypotheses – ResearchMate{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">Module 5: Research Gap & Hypothesis Generator</h1>
+  <p class="page-subtitle">Identify empirical voids in existing literature and formulate rigorous, testable academic hypotheses with IBM Granite.</p>
+</div>
+
+<div class="row g-4">
+  <!-- Left Column: Input -->
+  <div class="col-lg-5">
+    <div class="rm-card">
+      <div class="rm-card-header">
+        <h2 class="rm-card-title">
+          <i class="bi bi-puzzle-fill text-warning"></i>
+          <span>Gap Discovery Parameters</span>
+        </h2>
+      </div>
+      <div class="rm-card-body">
+        <form id="gap-analysis-form">
+          <div class="mb-3">
+            <label for="gap-topic" class="form-label fw-semibold">
+              Research Domain / Question <span class="text-danger">*</span>
+            </label>
+            <textarea
+              id="gap-topic"
+              class="form-control"
+              rows="3"
+              placeholder="e.g. Robustness and generalization of federated learning algorithms under non-IID data distributions"
+              required
+            ></textarea>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold d-flex justify-content-between align-items-center">
+              <span>Select Surveyed Papers <span class="text-danger">*</span></span>
+              <button type="button" id="select-all-gaps-btn" class="btn btn-sm btn-link p-0 text-decoration-none">Select All</button>
+            </label>
+            <div class="border rounded p-2" style="max-height: 260px; overflow-y: auto;">
+              {% for p in papers %}
+              <div class="form-check p-2 border-bottom">
+                <input class="form-check-input gap-paper-checkbox" type="checkbox" value="{{ p.id }}" id="gap-check-{{ p.id }}">
+                <label class="form-check-label text-dark fw-medium" for="gap-check-{{ p.id }}" style="font-size: 0.88rem; cursor: pointer;">
+                  {{ p.title }}
+                  <span class="d-block text-muted small">
+                    {{ p.authors or 'Unknown' }} ({{ p.year or 'N/A' }})
+                  </span>
+                </label>
+              </div>
+              {% else %}
+              <div class="text-muted small p-3 text-center">
+                No papers in your library yet. <a href="{{ url_for('views.search_papers') }}">Search papers</a> or <a href="{{ url_for('views.analyze_pdf') }}">upload PDFs</a> first.
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+
+          <div class="alert alert-light border small text-muted mb-3">
+            <i class="bi bi-shield-check text-success me-1"></i>
+            <strong>Academic Integrity Guard:</strong> Granite is instructed to anchor every identified gap directly to explicit limitations from your surveyed papers and flag all suggestions for human verification.
+          </div>
+
+          <button type="submit" id="generate-gaps-btn" class="btn btn-primary w-100 py-2 fw-semibold shadow-sm">
+            <i class="bi bi-cpu-fill me-1"></i> Find Gaps & Hypotheses
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right Column: Output -->
+  <div class="col-lg-7">
+    <div class="rm-card position-relative" style="min-height: 560px;">
+      <div class="rm-card-header d-flex justify-content-between align-items-center">
+        <h2 class="rm-card-title">
+          <i class="bi bi-lightning-charge text-primary"></i>
+          <span>Identified Gaps & Hypotheses</span>
+        </h2>
+        <div id="gap-actions" class="d-none">
+          <button id="copy-gaps-btn" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-clipboard"></i> Copy
+          </button>
+        </div>
+      </div>
+
+      <!-- Loading Overlay -->
+      <div id="gaps-loading" class="loading-spinner-overlay">
+        <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;"></div>
+        <h5 class="fw-bold mt-3 text-dark">Extracting Gaps with IBM Granite</h5>
+        <p class="text-muted small">Cross-examining paper limitations and formulating testable hypotheses...</p>
+      </div>
+
+      <!-- Empty State -->
+      <div id="gaps-empty" class="rm-card-body text-center py-5">
+        <i class="bi bi-puzzle text-muted" style="font-size: 4rem;"></i>
+        <h5 class="mt-3 text-secondary">Awaiting Gap Analysis</h5>
+        <p class="text-muted" style="max-width: 440px; margin: 0 auto; font-size: 0.9rem;">
+          Select your surveyed literature on the left and click <strong>Find Gaps & Hypotheses</strong>. Granite will discover overlooked methodologies, unaddressed constraints, and formal hypotheses.
+        </p>
+      </div>
+
+      <!-- Gaps Content Display -->
+      <div id="gaps-display" class="rm-card-body d-none">
+        <div id="gaps-content" style="font-size: 0.95rem; line-height: 1.7;"></div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById("select-all-gaps-btn")?.addEventListener("click", function() {
+  const checkboxes = document.querySelectorAll(".gap-paper-checkbox");
+  const allChecked = Array.from(checkboxes).every(c => c.checked);
+  checkboxes.forEach(c => c.checked = !allChecked);
+  this.innerText = allChecked ? "Select All" : "Deselect All";
+});
+
+document.getElementById("gap-analysis-form").addEventListener("submit", async function(e) {
+  e.preventDefault();
+  const topic = document.getElementById("gap-topic").value.trim();
+  const selectedCheckboxes = document.querySelectorAll(".gap-paper-checkbox:checked");
+  const paper_ids = Array.from(selectedCheckboxes).map(c => parseInt(c.value));
+
+  if (!topic) return;
+  if (paper_ids.length === 0) {
+    showToast("Please select at least one paper to evaluate for gaps", "warning");
+    return;
+  }
+
+  const loading = document.getElementById("gaps-loading");
+  const empty = document.getElementById("gaps-empty");
+  const display = document.getElementById("gaps-display");
+  const contentEl = document.getElementById("gaps-content");
+  const actions = document.getElementById("gap-actions");
+  const submitBtn = document.getElementById("generate-gaps-btn");
+
+  loading.classList.add("show");
+  submitBtn.disabled = true;
+
+  try {
+    const res = await fetch("/api/research-gaps", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ topic, paper_ids })
+    });
+    const data = await res.json();
+    loading.classList.remove("show");
+    submitBtn.disabled = false;
+
+    if (!data.success) {
+      if (data.setup_required) {
+        showToast(data.error, "warning");
+        contentEl.innerHTML = `
+          <div class="alert alert-warning border-warning">
+            <h5 class="fw-bold"><i class="bi bi-exclamation-triangle"></i> IBM Granite Credentials Required</h5>
+            <p>${data.error}</p>
+            <a href="/settings" class="btn btn-sm btn-dark">Open Settings</a>
+          </div>
+        `;
+        empty.classList.add("d-none");
+        display.classList.remove("d-none");
+      } else {
+        showToast(data.error || "Gap analysis failed", "danger");
+      }
+      return;
+    }
+
+    empty.classList.add("d-none");
+    display.classList.remove("d-none");
+    actions.classList.remove("d-none");
+
+    contentEl.innerHTML = renderMarkdown(data.analysis);
+    showToast("Research gaps and hypotheses generated successfully!", "success");
+
+  } catch (err) {
+    loading.classList.remove("show");
+    submitBtn.disabled = false;
+    showToast("Error generating research gaps: " + err, "danger");
+  }
+});
+
+document.getElementById("copy-gaps-btn").addEventListener("click", () => {
+  const text = document.getElementById("gaps-content").innerText;
+  copyToClipboard(text, "Research gaps and hypotheses copied to clipboard!");
+});
+</script>
+{% endblock %}

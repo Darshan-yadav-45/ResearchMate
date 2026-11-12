@@ -1,0 +1,250 @@
+{% extends "base.html" %}
+
+{% block title %}Settings – ResearchMate{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">IBM watsonx.ai & Granite Settings</h1>
+  <p class="page-subtitle">Configure your IBM Cloud Lite credentials to power ResearchMate with genuine IBM Granite models.</p>
+</div>
+
+<div class="row g-4">
+  <!-- Left Column: Settings Form -->
+  <div class="col-lg-7">
+    <div class="rm-card">
+      <div class="rm-card-header d-flex justify-content-between align-items-center">
+        <h2 class="rm-card-title">
+          <i class="bi bi-shield-lock-fill text-primary"></i>
+          <span>Service Credentials</span>
+        </h2>
+        {% if status.configured %}
+          <span class="badge bg-success-subtle text-success border border-success-subtle">
+            <i class="bi bi-check-circle-fill me-1"></i> Configured
+          </span>
+        {% else %}
+          <span class="badge bg-warning-subtle text-warning border border-warning-subtle">
+            <i class="bi bi-exclamation-triangle-fill me-1"></i> Action Required
+          </span>
+        {% endif %}
+      </div>
+      <div class="rm-card-body">
+        <form id="settings-form">
+          <!-- API Key -->
+          <div class="mb-3">
+            <label for="apikey-input" class="form-label fw-semibold">
+              IBM Cloud IAM API Key <span class="text-danger">*</span>
+            </label>
+            <div class="input-group">
+              <input
+                type="password"
+                id="apikey-input"
+                class="form-control"
+                placeholder="Paste your IBM Cloud IAM API Key"
+                value=""
+              >
+              <button class="btn btn-outline-secondary" type="button" id="toggle-apikey-btn">
+                <i class="bi bi-eye"></i>
+              </button>
+            </div>
+            <div class="form-text">
+              Status: <strong>{{ status.apikey_status }}</strong>. Never exposed in frontend or Git repositories.
+            </div>
+          </div>
+
+          <!-- Project ID -->
+          <div class="mb-3">
+            <label for="project-id-input" class="form-label fw-semibold">
+              watsonx.ai Project ID <span class="text-danger">*</span>
+            </label>
+            <input
+              type="text"
+              id="project-id-input"
+              class="form-control"
+              placeholder="e.g. 7f830a61-1234-4567-89ab-cdef01234567"
+              value="{{ status.project_id if status.project_id != 'Missing' else '' }}"
+            >
+            <div class="form-text">
+              Found in watsonx.ai console > Project Settings > General > Details.
+            </div>
+          </div>
+
+          <!-- Service URL -->
+          <div class="mb-3">
+            <label for="url-input" class="form-label fw-semibold">watsonx.ai Regional Endpoint</label>
+            <select id="url-input" class="form-select">
+              <option value="https://us-south.ml.cloud.ibm.com" {% if status.service_url == 'https://us-south.ml.cloud.ibm.com' %}selected{% endif %}>
+                Dallas (us-south) - https://us-south.ml.cloud.ibm.com
+              </option>
+              <option value="https://eu-de.ml.cloud.ibm.com" {% if status.service_url == 'https://eu-de.ml.cloud.ibm.com' %}selected{% endif %}>
+                Frankfurt (eu-de) - https://eu-de.ml.cloud.ibm.com
+              </option>
+              <option value="https://jp-tok.ml.cloud.ibm.com" {% if status.service_url == 'https://jp-tok.ml.cloud.ibm.com' %}selected{% endif %}>
+                Tokyo (jp-tok) - https://jp-tok.ml.cloud.ibm.com
+              </option>
+            </select>
+          </div>
+
+          <!-- Granite Model Selection -->
+          <div class="mb-4">
+            <label for="model-id-select" class="form-label fw-semibold">Supported IBM Granite Model</label>
+            <select id="model-id-select" class="form-select">
+              <option value="ibm/granite-13b-chat-v2" {% if status.model_id == 'ibm/granite-13b-chat-v2' %}selected{% endif %}>
+                ibm/granite-13b-chat-v2 (Recommended: High-precision academic reasoning & synthesis)
+              </option>
+              <option value="ibm/granite-3-8b-instruct" {% if status.model_id == 'ibm/granite-3-8b-instruct' %}selected{% endif %}>
+                ibm/granite-3-8b-instruct (Fast instruction-tuned model)
+              </option>
+              <option value="ibm/granite-20b-multilingual" {% if status.model_id == 'ibm/granite-20b-multilingual' %}selected{% endif %}>
+                ibm/granite-20b-multilingual (Multilingual paper summarization)
+              </option>
+              <option value="ibm/granite-3-2b-instruct" {% if status.model_id == 'ibm/granite-3-2b-instruct' %}selected{% endif %}>
+                ibm/granite-3-2b-instruct (Ultra-lightweight low-latency)
+              </option>
+            </select>
+          </div>
+
+          <div class="d-flex gap-2">
+            <button type="submit" id="save-settings-btn" class="btn btn-primary fw-semibold px-4">
+              <i class="bi bi-save me-1"></i> Save Configuration
+            </button>
+            <button type="button" id="test-connection-btn" class="btn btn-outline-secondary fw-semibold">
+              <i class="bi bi-activity me-1"></i> Test Connection
+            </button>
+          </div>
+        </form>
+
+        <!-- Connection Test Result Alert -->
+        <div id="test-result-box" class="mt-3 d-none"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right Column: Setup Guide -->
+  <div class="col-lg-5">
+    <div class="rm-card">
+      <div class="rm-card-header">
+        <h2 class="rm-card-title">
+          <i class="bi bi-info-circle-fill text-info"></i>
+          <span>IBM Cloud Lite Setup Guide</span>
+        </h2>
+      </div>
+      <div class="rm-card-body" style="font-size: 0.9rem; line-height: 1.6;">
+        <h6 class="fw-bold text-dark mb-2">Step 1: Sign up for IBM Cloud Lite</h6>
+        <p class="text-muted mb-3">
+          Create a free IBM Cloud Lite account at <a href="https://cloud.ibm.com/registration" target="_blank" class="fw-medium">cloud.ibm.com/registration</a> (no credit card required).
+        </p>
+
+        <h6 class="fw-bold text-dark mb-2">Step 2: Create a watsonx.ai Project</h6>
+        <p class="text-muted mb-3">
+          Log into <a href="https://dataplatform.cloud.ibm.com/" target="_blank" class="fw-medium">dataplatform.cloud.ibm.com</a>, create a new Project, and copy your <strong>Project ID</strong> from <em>Manage > General > Details</em>.
+        </p>
+
+        <h6 class="fw-bold text-dark mb-2">Step 3: Generate an IAM API Key</h6>
+        <p class="text-muted mb-3">
+          Go to <a href="https://cloud.ibm.com/iam/apikeys" target="_blank" class="fw-medium">cloud.ibm.com/iam/apikeys</a>, click <strong>Create an IBM Cloud API key</strong>, and copy your key.
+        </p>
+
+        <div class="border rounded p-3 bg-light">
+          <h6 class="fw-bold text-dark mb-1"><i class="bi bi-lock-fill text-success me-1"></i> Security Guarantee</h6>
+          <p class="text-muted small mb-0">
+            Keys are saved exclusively in your local <code>.env</code> file. ResearchMate never transmits your keys to third parties.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Toggle API Key visibility
+document.getElementById("toggle-apikey-btn").addEventListener("click", function() {
+  const input = document.getElementById("apikey-input");
+  const icon = this.querySelector("i");
+  if (input.type === "password") {
+    input.type = "text";
+    icon.className = "bi bi-eye-slash";
+  } else {
+    input.type = "password";
+    icon.className = "bi bi-eye";
+  }
+});
+
+// Save Settings
+document.getElementById("settings-form").addEventListener("submit", async function(e) {
+  e.preventDefault();
+  const apikey = document.getElementById("apikey-input").value.trim();
+  const project_id = document.getElementById("project-id-input").value.trim();
+  const url = document.getElementById("url-input").value;
+  const model_id = document.getElementById("model-id-select").value;
+
+  const saveBtn = document.getElementById("save-settings-btn");
+  saveBtn.disabled = true;
+
+  try {
+    const res = await fetch("/api/settings", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ apikey, project_id, url, model_id })
+    });
+    const data = await res.json();
+    saveBtn.disabled = false;
+
+    if (data.success) {
+      showToast("Settings saved successfully!", "success");
+      setTimeout(() => window.location.reload(), 1000);
+    } else {
+      showToast(data.error || "Failed to save settings", "danger");
+    }
+  } catch (err) {
+    saveBtn.disabled = false;
+    showToast("Error saving settings: " + err, "danger");
+  }
+});
+
+// Test Connection
+document.getElementById("test-connection-btn").addEventListener("click", async function() {
+  const apikey = document.getElementById("apikey-input").value.trim();
+  const project_id = document.getElementById("project-id-input").value.trim();
+  const url = document.getElementById("url-input").value;
+  const model_id = document.getElementById("model-id-select").value;
+
+  const resultBox = document.getElementById("test-result-box");
+  this.disabled = true;
+  this.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Testing...';
+  resultBox.className = "mt-3 d-none";
+
+  try {
+    const res = await fetch("/api/settings/test", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ apikey, project_id, url, model_id })
+    });
+    const data = await res.json();
+    this.disabled = false;
+    this.innerHTML = '<i class="bi bi-activity me-1"></i> Test Connection';
+
+    resultBox.classList.remove("d-none");
+    if (data.success) {
+      resultBox.className = "mt-3 alert alert-success";
+      resultBox.innerHTML = `
+        <h6 class="fw-bold mb-1"><i class="bi bi-check-circle-fill me-1"></i> IBM Granite Online</h6>
+        <p class="mb-0 small">${data.message}</p>
+      `;
+    } else {
+      resultBox.className = "mt-3 alert alert-danger";
+      resultBox.innerHTML = `
+        <h6 class="fw-bold mb-1"><i class="bi bi-x-circle-fill me-1"></i> Connection Failed</h6>
+        <p class="mb-0 small">${data.message || data.error}</p>
+      `;
+    }
+  } catch (err) {
+    this.disabled = false;
+    this.innerHTML = '<i class="bi bi-activity me-1"></i> Test Connection';
+    resultBox.className = "mt-3 alert alert-danger";
+    resultBox.innerHTML = `<h6 class="fw-bold mb-0">Error: ${err}</h6>`;
+  }
+});
+</script>
+{% endblock %}

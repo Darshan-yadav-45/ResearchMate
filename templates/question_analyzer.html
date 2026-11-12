@@ -1,0 +1,191 @@
+{% extends "base.html" %}
+
+{% block title %}Question Analyzer – ResearchMate{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">Module 1: Research Question Analyzer</h1>
+  <p class="page-subtitle">Formulate, deconstruct, and refine academic research questions with IBM Granite.</p>
+</div>
+
+<div class="row g-4">
+  <!-- Input Form Card -->
+  <div class="col-lg-5">
+    <div class="rm-card">
+      <div class="rm-card-header">
+        <h2 class="rm-card-title">
+          <i class="bi bi-lightbulb-fill text-warning"></i>
+          <span>Research Topic Formulation</span>
+        </h2>
+      </div>
+      <div class="rm-card-body">
+        <form id="question-analyzer-form">
+          <div class="mb-3">
+            <label for="topic-input" class="form-label fw-semibold">
+              Research Topic or Broad Question <span class="text-danger">*</span>
+            </label>
+            <textarea
+              id="topic-input"
+              class="form-control"
+              rows="4"
+              placeholder="e.g. Enhancing energy efficiency in edge AI inference using lightweight quantization techniques"
+              required
+            ></textarea>
+            <div class="form-text">
+              Enter any natural-language topic, problem statement, or thesis concept.
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label for="background-input" class="form-label fw-semibold">
+              Domain Context / Constraints (Optional)
+            </label>
+            <textarea
+              id="background-input"
+              class="form-control"
+              rows="3"
+              placeholder="e.g. Focus on embedded microcontroller units (MCUs) with sub-1 watt power envelopes."
+            ></textarea>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold">IBM Granite Model</label>
+            <input type="text" class="form-control bg-light" value="{{ granite_model_id }}" readonly>
+          </div>
+
+          <button type="submit" id="analyze-btn" class="btn btn-primary w-100 py-2 fw-semibold shadow-sm">
+            <i class="bi bi-cpu-fill me-1"></i> Analyze with IBM Granite
+          </button>
+        </form>
+
+        <div class="mt-4 pt-3 border-top">
+          <h6 class="fw-bold text-secondary mb-2" style="font-size: 0.85rem;">Quick Example Prompts:</h6>
+          <div class="d-flex flex-column gap-2">
+            <button class="btn btn-sm btn-outline-secondary text-start example-topic-btn" data-topic="Mitigating hallucination in large language models using Retrieval-Augmented Generation (RAG) and knowledge graphs" data-context="Medical and healthcare clinical documentation.">
+              <i class="bi bi-arrow-right-short text-primary"></i> RAG for LLM Hallucination in Healthcare
+            </button>
+            <button class="btn btn-sm btn-outline-secondary text-start example-topic-btn" data-topic="Adversarial robustness of vision transformers in autonomous driving perception systems" data-context="Adversarial patch attacks under varying weather conditions.">
+              <i class="bi bi-arrow-right-short text-primary"></i> Vision Transformers Adversarial Robustness
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Results Output Area -->
+  <div class="col-lg-7">
+    <div class="rm-card position-relative" style="min-height: 520px;">
+      <div class="rm-card-header d-flex justify-content-between align-items-center">
+        <h2 class="rm-card-title">
+          <i class="bi bi-journal-text text-primary"></i>
+          <span>Granite Structured Analysis</span>
+        </h2>
+        <div id="action-buttons" class="d-none">
+          <button id="copy-analysis-btn" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-clipboard"></i> Copy
+          </button>
+        </div>
+      </div>
+
+      <!-- Loading Overlay -->
+      <div id="loading-overlay" class="loading-spinner-overlay">
+        <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;"></div>
+        <h5 class="fw-bold mt-3 text-dark">Analyzing with IBM Granite</h5>
+        <p class="text-muted small">Synthesizing keywords, sub-questions, and search terms...</p>
+      </div>
+
+      <!-- Empty State -->
+      <div id="empty-state" class="rm-card-body text-center py-5">
+        <i class="bi bi-compass text-muted" style="font-size: 4rem;"></i>
+        <h5 class="mt-3 text-secondary">Awaiting Research Topic</h5>
+        <p class="text-muted" style="max-width: 400px; margin: 0 auto; font-size: 0.9rem;">
+          Enter your research topic on the left and click <strong>Analyze with IBM Granite</strong> to generate academic sub-questions, keywords, and Boolean search queries.
+        </p>
+      </div>
+
+      <!-- Analysis Content Area -->
+      <div id="analysis-content" class="rm-card-body d-none">
+        <div id="analysis-text" style="font-size: 0.95rem; line-height: 1.7;"></div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Load example topics
+document.querySelectorAll(".example-topic-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.getElementById("topic-input").value = btn.dataset.topic;
+    document.getElementById("background-input").value = btn.dataset.context;
+  });
+});
+
+// Submit Form
+document.getElementById("question-analyzer-form").addEventListener("submit", async function(e) {
+  e.preventDefault();
+  const topic = document.getElementById("topic-input").value.trim();
+  const background = document.getElementById("background-input").value.trim();
+  if (!topic) return;
+
+  const overlay = document.getElementById("loading-overlay");
+  const emptyState = document.getElementById("empty-state");
+  const contentArea = document.getElementById("analysis-content");
+  const analysisText = document.getElementById("analysis-text");
+  const actionButtons = document.getElementById("action-buttons");
+  const submitBtn = document.getElementById("analyze-btn");
+
+  overlay.classList.add("show");
+  submitBtn.disabled = true;
+
+  try {
+    const res = await fetch("/api/analyze-question", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ topic, background })
+    });
+    const data = await res.json();
+    overlay.classList.remove("show");
+    submitBtn.disabled = false;
+
+    if (!data.success) {
+      if (data.setup_required) {
+        showToast(data.error, "warning");
+        analysisText.innerHTML = `
+          <div class="alert alert-warning border-warning">
+            <h5 class="fw-bold"><i class="bi bi-exclamation-triangle"></i> IBM Granite Credentials Required</h5>
+            <p>${data.error}</p>
+            <a href="/settings" class="btn btn-sm btn-dark">Open Settings</a>
+          </div>
+        `;
+        emptyState.classList.add("d-none");
+        contentArea.classList.remove("d-none");
+      } else {
+        showToast(data.error || "Analysis failed", "danger");
+      }
+      return;
+    }
+
+    emptyState.classList.add("d-none");
+    contentArea.classList.remove("d-none");
+    actionButtons.classList.remove("d-none");
+
+    analysisText.innerHTML = renderMarkdown(data.analysis);
+    showToast("Question analyzed successfully by IBM Granite!", "success");
+
+  } catch (err) {
+    overlay.classList.remove("show");
+    submitBtn.disabled = false;
+    showToast("Network error: " + err, "danger");
+  }
+});
+
+// Copy Analysis
+document.getElementById("copy-analysis-btn").addEventListener("click", () => {
+  const text = document.getElementById("analysis-text").innerText;
+  copyToClipboard(text, "Research analysis copied to clipboard!");
+});
+</script>
+{% endblock %}

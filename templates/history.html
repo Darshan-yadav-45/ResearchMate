@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+
+{% block title %}Research History – ResearchMate{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+  <div>
+    <h1 class="page-title">Research Activity History</h1>
+    <p class="page-subtitle">Complete chronological audit trail of all searches, summaries, reviews, and generations.</p>
+  </div>
+  <div>
+    <button id="clear-history-btn" class="btn btn-outline-danger btn-sm">
+      <i class="bi bi-trash me-1"></i> Clear History
+    </button>
+  </div>
+</div>
+
+<div class="rm-card">
+  <div class="rm-card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th style="width: 180px;">Timestamp</th>
+            <th style="width: 160px;">Action</th>
+            <th>Title / Target</th>
+            <th>Summary / Details</th>
+          </tr>
+        </thead>
+        <tbody id="history-table-body">
+          <tr>
+            <td colspan="4" class="text-center py-4 text-muted">
+              <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
+              Loading research history...
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+async function loadHistory() {
+  const tbody = document.getElementById("history-table-body");
+  try {
+    const res = await fetch("/api/history");
+    const data = await res.json();
+    if (!data.success || data.history.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="4" class="text-center py-5 text-muted">
+            <i class="bi bi-clock-history fs-2 d-block mb-2"></i>
+            No research history logged yet.
+          </td>
+        </tr>
+      `;
+      return;
+    }
+
+    const badgeClasses = {
+      QUESTION_ANALYSIS: "bg-warning text-dark",
+      PAPER_SEARCH: "bg-primary text-white",
+      PDF_UPLOAD: "bg-info text-dark",
+      PAPER_SUMMARY: "bg-success text-white",
+      LITERATURE_REVIEW: "bg-purple text-white",
+      RESEARCH_Gaps: "bg-teal text-white",
+      REPORT_GENERATION: "bg-dark text-white",
+      ADD_REFERENCE: "bg-secondary text-white",
+    };
+
+    tbody.innerHTML = "";
+    data.history.forEach(item => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td class="text-muted small">${item.created_at}</td>
+        <td>
+          <span class="badge ${badgeClasses[item.action_type] || 'bg-light text-dark border'}">
+            ${item.action_type.replace('_', ' ')}
+          </span>
+        </td>
+        <td class="fw-semibold text-dark">${item.title}</td>
+        <td class="text-secondary small" style="max-width: 400px;">${item.summary || '-'}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+  } catch (err) {
+    tbody.innerHTML = `<tr><td colspan="4" class="text-danger text-center">Error loading history: ${err}</td></tr>`;
+  }
+}
+
+document.getElementById("clear-history-btn").addEventListener("click", async () => {
+  if (!confirm("Are you sure you want to clear your research activity log?")) return;
+  try {
+    const res = await fetch("/api/history", { method: "DELETE" });
+    const data = await res.json();
+    if (data.success) {
+      showToast("History cleared", "success");
+      loadHistory();
+    }
+  } catch (err) {
+    showToast("Error clearing history: " + err, "danger");
+  }
+});
+
+loadHistory();
+</script>
+{% endblock %}

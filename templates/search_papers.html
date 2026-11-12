@@ -1,0 +1,212 @@
+{% extends "base.html" %}
+
+{% block title %}Search Papers – ResearchMate{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">Module 2: Academic Paper Search</h1>
+  <p class="page-subtitle">Search over 250M+ verified peer-reviewed academic works via OpenAlex API.</p>
+</div>
+
+<!-- Search Controls Card -->
+<div class="rm-card">
+  <div class="rm-card-body">
+    <form id="search-papers-form">
+      <div class="row g-3 align-items-end">
+        <div class="col-lg-6">
+          <label for="search-query" class="form-label fw-semibold">
+            Search Academic Query or Keywords <span class="text-danger">*</span>
+          </label>
+          <div class="input-group">
+            <span class="input-group-text bg-white"><i class="bi bi-search text-primary"></i></span>
+            <input
+              type="text"
+              id="search-query"
+              class="form-control"
+              placeholder="e.g. transformer self-attention energy efficiency"
+              required
+            >
+          </div>
+        </div>
+
+        <div class="col-sm-6 col-lg-2">
+          <label for="from-year" class="form-label fw-semibold">From Year</label>
+          <input type="number" id="from-year" class="form-control" placeholder="2018" min="1950" max="2026">
+        </div>
+
+        <div class="col-sm-6 col-lg-2">
+          <label for="to-year" class="form-label fw-semibold">To Year</label>
+          <input type="number" id="to-year" class="form-control" placeholder="2026" min="1950" max="2026">
+        </div>
+
+        <div class="col-lg-2">
+          <button type="submit" id="search-btn" class="btn btn-primary w-100 py-2 fw-semibold">
+            <i class="bi bi-search me-1"></i> Search
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Results Area -->
+<div class="rm-card position-relative" style="min-height: 400px;">
+  <div class="rm-card-header d-flex justify-content-between align-items-center">
+    <h2 class="rm-card-title">
+      <i class="bi bi-journals text-primary"></i>
+      <span>Verified Academic Literature</span>
+    </h2>
+    <span id="results-count" class="badge bg-light text-secondary border">0 results</span>
+  </div>
+
+  <!-- Loading Overlay -->
+  <div id="search-loading" class="loading-spinner-overlay">
+    <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;"></div>
+    <h5 class="fw-bold mt-3 text-dark">Searching Academic Databases</h5>
+    <p class="text-muted small">Retrieving genuine publications from OpenAlex...</p>
+  </div>
+
+  <!-- Empty Initial State -->
+  <div id="search-empty" class="rm-card-body text-center py-5">
+    <i class="bi bi-search-heart text-muted" style="font-size: 3.5rem;"></i>
+    <h5 class="mt-3 text-secondary">Discover Peer-Reviewed Literature</h5>
+    <p class="text-muted" style="max-width: 480px; margin: 0 auto; font-size: 0.9rem;">
+      Enter your research topic or keywords above to search legitimate academic papers, inspect abstracts, and save them directly to your local workspace library.
+    </p>
+  </div>
+
+  <!-- Results List -->
+  <div id="papers-list" class="rm-card-body d-flex flex-column gap-3 d-none"></div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Check for query parameter in URL (e.g. from Question Analyzer)
+const urlParams = new URLSearchParams(window.location.search);
+if (urlParams.get("q")) {
+  document.getElementById("search-query").value = urlParams.get("q");
+  document.getElementById("search-papers-form").dispatchEvent(new Event("submit"));
+}
+
+document.getElementById("search-papers-form").addEventListener("submit", async function(e) {
+  e.preventDefault();
+  const query = document.getElementById("search-query").value.trim();
+  const fromYear = document.getElementById("from-year").value.trim();
+  const toYear = document.getElementById("to-year").value.trim();
+
+  if (!query) return;
+
+  const loading = document.getElementById("search-loading");
+  const empty = document.getElementById("search-empty");
+  const list = document.getElementById("papers-list");
+  const countBadge = document.getElementById("results-count");
+  const submitBtn = document.getElementById("search-btn");
+
+  loading.classList.add("show");
+  submitBtn.disabled = true;
+
+  let url = `/api/search-papers?query=${encodeURIComponent(query)}`;
+  if (fromYear) url += `&from_year=${fromYear}`;
+  if (toYear) url += `&to_year=${toYear}`;
+
+  try {
+    const res = await fetch(url);
+    const data = await res.json();
+    loading.classList.remove("show");
+    submitBtn.disabled = false;
+
+    if (!data.success) {
+      showToast(data.error || "Search failed", "danger");
+      return;
+    }
+
+    const papers = data.data.papers || [];
+    countBadge.innerText = `${data.data.total_count || papers.length} papers found`;
+
+    empty.classList.add("d-none");
+    list.classList.remove("d-none");
+    list.innerHTML = "";
+
+    if (papers.length === 0) {
+      list.innerHTML = `
+        <div class="text-center py-5 text-muted">
+          <i class="bi bi-emoji-neutral fs-2 d-block mb-2"></i>
+          No papers found matching "${query}". Try broadening your keywords.
+        </div>
+      `;
+      return;
+    }
+
+    papers.forEach((p, idx) => {
+      const paperCard = document.createElement("div");
+      paperCard.className = "card border shadow-sm p-3";
+      paperCard.innerHTML = `
+        <div class="d-flex justify-content-between align-items-start gap-3">
+          <div class="flex-grow-1">
+            <h5 class="fw-bold mb-1 text-dark">
+              ${p.url ? `<a href="${p.url}" target="_blank" class="text-decoration-none text-dark hover-primary">${p.title} <i class="bi bi-box-arrow-up-right small text-muted"></i></a>` : p.title}
+            </h5>
+            <div class="text-muted small mb-2">
+              <i class="bi bi-people-fill text-secondary me-1"></i> ${p.authors}
+              <span class="mx-2">•</span>
+              <i class="bi bi-calendar3 me-1"></i> ${p.year}
+              <span class="mx-2">•</span>
+              <i class="bi bi-journal-text me-1"></i> ${p.journal}
+              ${p.citation_count ? `<span class="mx-2">•</span><span class="badge bg-secondary-subtle text-secondary">${p.citation_count} Citations</span>` : ''}
+              ${p.is_open_access ? '<span class="badge badge-oa ms-2">Open Access</span>' : ''}
+            </div>
+
+            <div class="abstract-box text-secondary" style="font-size: 0.88rem; line-height: 1.5;">
+              ${p.abstract}
+            </div>
+
+            ${p.doi ? `<div class="mt-2 text-muted small"><strong class="text-dark">DOI:</strong> <a href="${p.doi.startsWith('http') ? p.doi : 'https://doi.org/' + p.doi}" target="_blank" class="text-muted">${p.doi}</a></div>` : ''}
+          </div>
+
+          <div>
+            <button class="btn btn-sm btn-outline-primary text-nowrap save-paper-btn" data-index="${idx}">
+              <i class="bi bi-bookmark-plus me-1"></i> Save to Library
+            </button>
+          </div>
+        </div>
+      `;
+
+      // Save Paper Button
+      paperCard.querySelector(".save-paper-btn").addEventListener("click", async function() {
+        this.disabled = true;
+        this.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Saving...';
+        try {
+          const saveRes = await fetch("/api/save-paper", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(p)
+          });
+          const saveData = await saveRes.json();
+          if (saveData.success) {
+            this.className = "btn btn-sm btn-success text-nowrap";
+            this.innerHTML = '<i class="bi bi-check2"></i> Saved';
+            showToast("Paper saved to your research library!", "success");
+          } else {
+            this.disabled = false;
+            this.innerHTML = '<i class="bi bi-bookmark-plus me-1"></i> Save to Library';
+            showToast(saveData.error || "Failed to save paper", "danger");
+          }
+        } catch (err) {
+          this.disabled = false;
+          this.innerHTML = '<i class="bi bi-bookmark-plus me-1"></i> Save to Library';
+          showToast("Error saving paper: " + err, "danger");
+        }
+      });
+
+      list.appendChild(paperCard);
+    });
+
+  } catch (err) {
+    loading.classList.remove("show");
+    submitBtn.disabled = false;
+    showToast("Error searching papers: " + err, "danger");
+  }
+});
+</script>
+{% endblock %}

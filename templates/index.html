@@ -1,0 +1,385 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard – ResearchMate{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex align-items-center justify-content-between flex-wrap gap-2">
+  <div>
+    <h1 class="page-title">Research Workspace Dashboard</h1>
+    <p class="page-subtitle">AICTE–IBM SkillsBuild Problem Statement No. 1: AI-Powered Academic Research Agent</p>
+  </div>
+  <div>
+    <a href="{{ url_for('views.question_analyzer') }}" class="btn btn-primary d-inline-flex align-items-center gap-2 shadow-sm">
+      <i class="bi bi-plus-circle"></i>
+      <span>Start New Research</span>
+    </a>
+  </div>
+</div>
+
+{% if not watsonx_status.configured %}
+<div class="alert alert-warning border-warning shadow-sm d-flex align-items-center justify-content-between flex-wrap gap-3 mb-4" role="alert">
+  <div class="d-flex align-items-center gap-3">
+    <i class="bi bi-exclamation-triangle-fill fs-3 text-warning"></i>
+    <div>
+      <h6 class="alert-heading mb-1 fw-bold">IBM watsonx.ai Credentials Required</h6>
+      <p class="mb-0" style="font-size: 0.88rem;">
+        To activate IBM Granite generation across all research modules, please set your <strong>WATSONX_APIKEY</strong> and <strong>WATSONX_PROJECT_ID</strong>.
+      </p>
+    </div>
+  </div>
+  <a href="{{ url_for('views.settings') }}" class="btn btn-sm btn-dark">Configure IBM Granite Now</a>
+</div>
+{% endif %}
+
+<!-- Stats Grid -->
+<div class="row g-3 mb-4">
+  <div class="col-12 col-sm-6 col-xl">
+    <div class="stat-card">
+      <div class="stat-icon-wrapper stat-icon-blue">
+        <i class="bi bi-file-earmark-pdf"></i>
+      </div>
+      <div>
+        <div class="stat-value">{{ papers_count }}</div>
+        <div class="stat-label">Surveyed Papers</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-12 col-sm-6 col-xl">
+    <div class="stat-card">
+      <div class="stat-icon-wrapper stat-icon-purple">
+        <i class="bi bi-book"></i>
+      </div>
+      <div>
+        <div class="stat-value">{{ reviews_count }}</div>
+        <div class="stat-label">Literature Reviews</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-12 col-sm-6 col-xl">
+    <div class="stat-card">
+      <div class="stat-icon-wrapper stat-icon-teal">
+        <i class="bi bi-puzzle"></i>
+      </div>
+      <div>
+        <div class="stat-value">{{ gaps_count }}</div>
+        <div class="stat-label">Research Gaps</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-12 col-sm-6 col-xl">
+    <div class="stat-card">
+      <div class="stat-icon-wrapper stat-icon-green">
+        <i class="bi bi-quote"></i>
+      </div>
+      <div>
+        <div class="stat-value">{{ references_count }}</div>
+        <div class="stat-label">Organized References</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-12 col-sm-6 col-xl">
+    <div class="stat-card">
+      <div class="stat-icon-wrapper stat-icon-blue">
+        <i class="bi bi-file-earmark-text"></i>
+      </div>
+      <div>
+        <div class="stat-value">{{ reports_count }}</div>
+        <div class="stat-label">Draft Reports</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Interactive RAG Grounded Q&A Assistant -->
+<div class="rm-card mb-4 border-primary shadow-sm">
+  <div class="rm-card-header bg-white">
+    <h2 class="rm-card-title text-primary">
+      <i class="bi bi-chat-quote-fill"></i>
+      <span>Ask Research Question (Grounded RAG)</span>
+    </h2>
+    <span class="badge bg-primary-subtle text-primary border border-primary-subtle">IBM Granite RAG</span>
+  </div>
+  <div class="rm-card-body">
+    <p class="text-muted" style="font-size: 0.9rem;">
+      Query your uploaded research papers. IBM Granite answers strictly based on retrieved document chunks with source paper and page citations.
+    </p>
+    <form id="rag-query-form" class="mb-3">
+      <div class="input-group">
+        <input type="text" id="rag-question-input" class="form-control form-control-lg" placeholder="e.g. What are the main limitations identified in the transformer attention mechanism?" required>
+        <button class="btn btn-primary px-4 fw-semibold" type="submit" id="rag-submit-btn">
+          <i class="bi bi-send-fill me-1"></i> Ask Granite
+        </button>
+      </div>
+    </form>
+
+    <div id="rag-loading" class="text-center py-4 d-none">
+      <div class="spinner-border text-primary" role="status"></div>
+      <p class="text-muted mt-2 mb-0" style="font-size: 0.9rem;">Retrieving relevant paper chunks & querying IBM Granite...</p>
+    </div>
+
+    <div id="rag-response-container" class="d-none mt-3">
+      <div class="card border-0 bg-light p-3 mb-3">
+        <h6 class="fw-bold text-dark d-flex align-items-center gap-2 mb-2">
+          <i class="bi bi-robot text-primary"></i> IBM Granite Grounded Answer:
+        </h6>
+        <div id="rag-answer-text" class="text-dark" style="font-size: 0.95rem; line-height: 1.6;"></div>
+      </div>
+
+      <div id="rag-sources-container">
+        <h6 class="fw-bold text-secondary mb-2" style="font-size: 0.85rem;">
+          <i class="bi bi-link-45deg"></i> Retrieved Evidence Chunks:
+        </h6>
+        <div id="rag-sources-list" class="d-flex flex-column gap-2"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Quick Module Shortcuts -->
+<div class="row g-3 mb-4">
+  <div class="col-md-4">
+    <div class="rm-card h-100">
+      <div class="rm-card-body">
+        <div class="d-flex align-items-center gap-3 mb-3">
+          <div class="stat-icon-wrapper stat-icon-blue">
+            <i class="bi bi-lightbulb"></i>
+          </div>
+          <div>
+            <h5 class="fw-bold m-0">Question Analyzer</h5>
+            <small class="text-muted">Module 1</small>
+          </div>
+        </div>
+        <p class="text-muted" style="font-size: 0.88rem;">
+          Deconstruct research ideas, formulate sub-questions, extract keywords, and generate Boolean queries.
+        </p>
+        <a href="{{ url_for('views.question_analyzer') }}" class="btn btn-sm btn-outline-primary w-100">Open Module</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-4">
+    <div class="rm-card h-100">
+      <div class="rm-card-body">
+        <div class="d-flex align-items-center gap-3 mb-3">
+          <div class="stat-icon-wrapper stat-icon-purple">
+            <i class="bi bi-search"></i>
+          </div>
+          <div>
+            <h5 class="fw-bold m-0">Paper Search</h5>
+            <small class="text-muted">Module 2 (OpenAlex)</small>
+          </div>
+        </div>
+        <p class="text-muted" style="font-size: 0.88rem;">
+          Search 250M+ genuine peer-reviewed academic works. Filter by year, inspect abstracts, and import to your library.
+        </p>
+        <a href="{{ url_for('views.search_papers') }}" class="btn btn-sm btn-outline-primary w-100">Search Literature</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-4">
+    <div class="rm-card h-100">
+      <div class="rm-card-body">
+        <div class="d-flex align-items-center gap-3 mb-3">
+          <div class="stat-icon-wrapper stat-icon-teal">
+            <i class="bi bi-file-earmark-pdf"></i>
+          </div>
+          <div>
+            <h5 class="fw-bold m-0">PDF Analyzer</h5>
+            <small class="text-muted">Module 3 (PyMuPDF)</small>
+          </div>
+        </div>
+        <p class="text-muted" style="font-size: 0.88rem;">
+          Extract text and generate IBM Granite 6-section structured summaries: objectives, methods, findings, and limits.
+        </p>
+        <a href="{{ url_for('views.analyze_pdf') }}" class="btn btn-sm btn-outline-primary w-100">Upload & Analyze</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-4">
+    <div class="rm-card h-100">
+      <div class="rm-card-body">
+        <div class="d-flex align-items-center gap-3 mb-3">
+          <div class="stat-icon-wrapper stat-icon-green">
+            <i class="bi bi-book"></i>
+          </div>
+          <div>
+            <h5 class="fw-bold m-0">Literature Review</h5>
+            <small class="text-muted">Module 4</small>
+          </div>
+        </div>
+        <p class="text-muted" style="font-size: 0.88rem;">
+          Compare multiple surveyed papers in a matrix table and generate an evidence-grounded literature review draft.
+        </p>
+        <a href="{{ url_for('views.literature_review') }}" class="btn btn-sm btn-outline-primary w-100">Review Assistant</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-4">
+    <div class="rm-card h-100">
+      <div class="rm-card-body">
+        <div class="d-flex align-items-center gap-3 mb-3">
+          <div class="stat-icon-wrapper stat-icon-blue">
+            <i class="bi bi-puzzle"></i>
+          </div>
+          <div>
+            <h5 class="fw-bold m-0">Research Gaps</h5>
+            <small class="text-muted">Module 5</small>
+          </div>
+        </div>
+        <p class="text-muted" style="font-size: 0.88rem;">
+          Identify unaddressed literature gaps, formulate testable hypotheses, and evaluate feasibility.
+        </p>
+        <a href="{{ url_for('views.research_gaps') }}" class="btn btn-sm btn-outline-primary w-100">Find Gaps</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-4">
+    <div class="rm-card h-100">
+      <div class="rm-card-body">
+        <div class="d-flex align-items-center gap-3 mb-3">
+          <div class="stat-icon-wrapper stat-icon-purple">
+            <i class="bi bi-file-earmark-text"></i>
+          </div>
+          <div>
+            <h5 class="fw-bold m-0">Report Generator</h5>
+            <small class="text-muted">Module 7 (13 Sections)</small>
+          </div>
+        </div>
+        <p class="text-muted" style="font-size: 0.88rem;">
+          Generate formal 13-section IMRaD research paper drafts with clear original research markers.
+        </p>
+        <a href="{{ url_for('views.report_generator') }}" class="btn btn-sm btn-outline-primary w-100">Generate Draft</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Recent Papers in Library -->
+<div class="rm-card">
+  <div class="rm-card-header">
+    <h2 class="rm-card-title">
+      <i class="bi bi-journal-bookmark"></i>
+      <span>Recent Papers in Library</span>
+    </h2>
+    <a href="{{ url_for('views.search_papers') }}" class="btn btn-sm btn-link text-decoration-none">Search More Papers</a>
+  </div>
+  <div class="rm-card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>Title</th>
+            <th>Authors</th>
+            <th>Year</th>
+            <th>Source</th>
+            <th>Summary</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for p in recent_papers %}
+          <tr>
+            <td class="fw-semibold text-dark" style="max-width: 320px;">
+              {{ p.title }}
+            </td>
+            <td class="text-muted small" style="max-width: 200px;">{{ p.authors }}</td>
+            <td><span class="badge bg-light text-dark border">{{ p.year or 'N/A' }}</span></td>
+            <td>
+              {% if p.source == 'pdf_upload' %}
+                <span class="badge bg-primary-subtle text-primary border border-primary-subtle">PDF Upload</span>
+              {% else %}
+                <span class="badge bg-success-subtle text-success border border-success-subtle">OpenAlex</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if p.summary %}
+                <span class="badge bg-success"><i class="bi bi-check2"></i> Analyzed</span>
+              {% else %}
+                <span class="badge bg-secondary">Pending</span>
+              {% endif %}
+            </td>
+            <td>
+              <a href="{{ url_for('views.analyze_pdf') }}" class="btn btn-sm btn-outline-secondary">View</a>
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="6" class="text-center py-4 text-muted">
+              <i class="bi bi-folder-x fs-3 d-block mb-2"></i>
+              No papers added yet. Search academic literature or upload research PDFs to get started.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById("rag-query-form").addEventListener("submit", async function(e) {
+  e.preventDefault();
+  const q = document.getElementById("rag-question-input").value.trim();
+  if (!q) return;
+
+  const loadingEl = document.getElementById("rag-loading");
+  const responseContainer = document.getElementById("rag-response-container");
+  const answerEl = document.getElementById("rag-answer-text");
+  const sourcesEl = document.getElementById("rag-sources-list");
+  const submitBtn = document.getElementById("rag-submit-btn");
+
+  loadingEl.classList.remove("d-none");
+  responseContainer.classList.add("d-none");
+  submitBtn.disabled = true;
+
+  try {
+    const res = await fetch("/api/rag/query", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ question: q, top_k: 4 })
+    });
+    const data = await res.json();
+    loadingEl.classList.add("d-none");
+    submitBtn.disabled = false;
+
+    if (!data.success) {
+      showToast(data.error || "RAG query failed", "danger");
+      return;
+    }
+
+    const result = data.result;
+    answerEl.innerHTML = renderMarkdown(result.answer);
+
+    sourcesEl.innerHTML = "";
+    if (result.sources && result.sources.length > 0) {
+      result.sources.forEach((s, idx) => {
+        sourcesEl.innerHTML += `
+          <div class="border rounded p-2 bg-white" style="font-size: 0.85rem;">
+            <div class="d-flex justify-content-between text-muted mb-1">
+              <strong>${idx + 1}. ${s.paper_title}</strong>
+              <span class="badge bg-light text-dark">Page ${s.page_number} | Relevance: ${(s.similarity_score * 100).toFixed(0)}%</span>
+            </div>
+            <p class="mb-0 text-secondary fst-italic">"${s.preview}"</p>
+          </div>
+        `;
+      });
+    } else {
+      sourcesEl.innerHTML = '<span class="text-muted small">No direct source excerpts returned.</span>';
+    }
+
+    responseContainer.classList.remove("d-none");
+
+  } catch (err) {
+    loadingEl.classList.add("d-none");
+    submitBtn.disabled = false;
+    showToast("Error executing RAG query: " + err, "danger");
+  }
+});
+</script>
+{% endblock %}

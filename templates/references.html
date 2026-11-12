@@ -1,0 +1,267 @@
+{% extends "base.html" %}
+
+{% block title %}Reference Manager – ResearchMate{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+  <div>
+    <h1 class="page-title">Module 6: Academic Reference Manager</h1>
+    <p class="page-subtitle">Organize bibliographic records, auto-format to APA 7th & IEEE, and export to BibTeX or RIS.</p>
+  </div>
+  <div class="d-flex gap-2">
+    <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#addRefModal">
+      <i class="bi bi-plus-lg me-1"></i> Add Reference
+    </button>
+    <div class="dropdown">
+      <button class="btn btn-primary dropdown-toggle fw-semibold" type="button" data-bs-toggle="dropdown">
+        <i class="bi bi-download me-1"></i> Export References
+      </button>
+      <ul class="dropdown-menu dropdown-menu-end shadow">
+        <li><a class="dropdown-item export-ref-link" href="#" data-format="bibtex"><i class="bi bi-code-slash me-2"></i>BibTeX (.bib)</a></li>
+        <li><a class="dropdown-item export-ref-link" href="#" data-format="ris"><i class="bi bi-file-earmark-arrow-down me-2"></i>RIS (EndNote / Zotero)</a></li>
+        <li><hr class="dropdown-divider"></li>
+        <li><a class="dropdown-item export-ref-link" href="#" data-format="apa"><i class="bi bi-file-text me-2"></i>APA 7th Text List</a></li>
+        <li><a class="dropdown-item export-ref-link" href="#" data-format="ieee"><i class="bi bi-list-ol me-2"></i>IEEE Text List</a></li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- Reference List Table Card -->
+<div class="rm-card">
+  <div class="rm-card-header d-flex justify-content-between align-items-center">
+    <h2 class="rm-card-title">
+      <i class="bi bi-quote text-primary"></i>
+      <span>Bibliographic Citations ({{ refs|length }})</span>
+    </h2>
+    <div class="btn-group btn-group-sm" role="group">
+      <input type="radio" class="btn-check" name="format-view" id="view-apa" autocomplete="off" checked>
+      <label class="btn btn-outline-secondary" for="view-apa">APA 7th</label>
+
+      <input type="radio" class="btn-check" name="format-view" id="view-ieee" autocomplete="off">
+      <label class="btn btn-outline-secondary" for="view-ieee">IEEE</label>
+
+      <input type="radio" class="btn-check" name="format-view" id="view-bibtex" autocomplete="off">
+      <label class="btn btn-outline-secondary" for="view-bibtex">BibTeX</label>
+    </div>
+  </div>
+
+  <div class="rm-card-body p-0">
+    <div class="list-group list-group-flush" id="references-container">
+      {% for r in refs %}
+      <div class="list-group-item p-3 ref-item-row" data-id="{{ r.id }}">
+        <div class="d-flex justify-content-between align-items-start gap-3">
+          <div class="flex-grow-1">
+            <h6 class="fw-bold text-dark mb-1">{{ r.title }}</h6>
+            
+            <!-- APA View -->
+            <div class="format-view-content view-apa-content text-secondary mb-2" style="font-size: 0.9rem;">
+              {{ r.citation_apa or r.title }}
+            </div>
+
+            <!-- IEEE View -->
+            <div class="format-view-content view-ieee-content text-secondary mb-2 d-none" style="font-size: 0.9rem;">
+              {{ r.citation_ieee or r.title }}
+            </div>
+
+            <!-- BibTeX View -->
+            <div class="format-view-content view-bibtex-content citation-box mb-2 d-none">
+{{ r.bibtex or '@article{ref, title={' + r.title + '}}' }}
+            </div>
+
+            <div class="d-flex align-items-center gap-2 text-muted small">
+              {% if r.doi %}
+                <span><strong>DOI:</strong> <a href="{{ r.doi if r.doi.startswith('http') else 'https://doi.org/' + r.doi }}" target="_blank" class="text-muted">{{ r.doi }}</a></span>
+                <span>•</span>
+              {% endif %}
+              {% if r.journal %}
+                <span><i class="bi bi-journal text-secondary"></i> {{ r.journal }}</span>
+                <span>•</span>
+              {% endif %}
+              <span>{{ r.year or 'n.d.' }}</span>
+            </div>
+          </div>
+
+          <div class="d-flex align-items-center gap-2">
+            <button class="btn btn-sm btn-outline-secondary copy-citation-btn" title="Copy Citation">
+              <i class="bi bi-clipboard"></i>
+            </button>
+            <button class="btn btn-sm btn-outline-danger delete-ref-btn" data-id="{{ r.id }}" title="Delete Reference">
+              <i class="bi bi-trash"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+      {% else %}
+      <div class="p-5 text-center text-muted">
+        <i class="bi bi-journal-x fs-2 d-block mb-2"></i>
+        No references stored. Search academic papers or upload PDFs to populate citations automatically.
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Add Custom Reference -->
+<div class="modal fade" id="addRefModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title fw-bold"><i class="bi bi-bookmark-plus text-primary me-2"></i>Add Academic Reference</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <form id="add-ref-form">
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Title of Paper / Book <span class="text-danger">*</span></label>
+            <input type="text" id="ref-title" class="form-control" required placeholder="e.g. Attention Is All You Need">
+          </div>
+          <div class="row g-3 mb-3">
+            <div class="col-md-8">
+              <label class="form-label fw-semibold">Authors (comma separated) <span class="text-danger">*</span></label>
+              <input type="text" id="ref-authors" class="form-control" required placeholder="e.g. Vaswani, Ashish, Noam Shazeer, Niki Parmar">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold">Year</label>
+              <input type="number" id="ref-year" class="form-control" placeholder="2017">
+            </div>
+          </div>
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Journal / Conference</label>
+              <input type="text" id="ref-journal" class="form-control" placeholder="Advances in Neural Information Processing Systems (NeurIPS)">
+            </div>
+            <div class="col-md-2">
+              <label class="form-label fw-semibold">Volume</label>
+              <input type="text" id="ref-vol" class="form-control" placeholder="30">
+            </div>
+            <div class="col-md-2">
+              <label class="form-label fw-semibold">Issue</label>
+              <input type="text" id="ref-issue" class="form-control" placeholder="1">
+            </div>
+            <div class="col-md-2">
+              <label class="form-label fw-semibold">Pages</label>
+              <input type="text" id="ref-pages" class="form-control" placeholder="5998-6008">
+            </div>
+          </div>
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">DOI</label>
+              <input type="text" id="ref-doi" class="form-control" placeholder="10.5555/3295222.3295349">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">URL</label>
+              <input type="url" id="ref-url" class="form-control" placeholder="https://arxiv.org/abs/1706.03762">
+            </div>
+          </div>
+          <button type="submit" class="btn btn-primary w-100 py-2 fw-semibold">Save Reference</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Format toggle view
+document.querySelectorAll("input[name='format-view']").forEach(radio => {
+  radio.addEventListener("change", (e) => {
+    const selected = e.target.id;
+    document.querySelectorAll(".format-view-content").forEach(el => el.classList.add("d-none"));
+    if (selected === "view-apa") {
+      document.querySelectorAll(".view-apa-content").forEach(el => el.classList.remove("d-none"));
+    } else if (selected === "view-ieee") {
+      document.querySelectorAll(".view-ieee-content").forEach(el => el.classList.remove("d-none"));
+    } else if (selected === "view-bibtex") {
+      document.querySelectorAll(".view-bibtex-content").forEach(el => el.classList.remove("d-none"));
+    }
+  });
+});
+
+// Copy Citation Button
+document.querySelectorAll(".copy-citation-btn").forEach(btn => {
+  btn.addEventListener("click", function() {
+    const row = this.closest(".ref-item-row");
+    const activeView = document.querySelector("input[name='format-view']:checked").id;
+    let targetSelector = ".view-apa-content";
+    if (activeView === "view-ieee") targetSelector = ".view-ieee-content";
+    if (activeView === "view-bibtex") targetSelector = ".view-bibtex-content";
+
+    const text = row.querySelector(targetSelector).innerText;
+    copyToClipboard(text, "Citation copied to clipboard!");
+  });
+});
+
+// Delete Reference
+document.querySelectorAll(".delete-ref-btn").forEach(btn => {
+  btn.addEventListener("click", async function() {
+    if (!confirm("Are you sure you want to remove this reference?")) return;
+    const refId = this.dataset.id;
+    try {
+      const res = await fetch(`/api/references/${refId}`, { method: "DELETE" });
+      const data = await res.json();
+      if (data.success) {
+        showToast("Reference removed", "success");
+        this.closest(".ref-item-row").remove();
+      }
+    } catch (err) {
+      showToast("Error deleting reference: " + err, "danger");
+    }
+  });
+});
+
+// Add Reference Form
+document.getElementById("add-ref-form").addEventListener("submit", async function(e) {
+  e.preventDefault();
+  const payload = {
+    title: document.getElementById("ref-title").value.trim(),
+    authors: document.getElementById("ref-authors").value.trim(),
+    year: parseInt(document.getElementById("ref-year").value.trim()) || null,
+    journal: document.getElementById("ref-journal").value.trim(),
+    volume: document.getElementById("ref-vol").value.trim(),
+    issue: document.getElementById("ref-issue").value.trim(),
+    pages: document.getElementById("ref-pages").value.trim(),
+    doi: document.getElementById("ref-doi").value.trim(),
+    url: document.getElementById("ref-url").value.trim(),
+  };
+
+  try {
+    const res = await fetch("/api/references", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (data.success) {
+      showToast("Reference added successfully!", "success");
+      setTimeout(() => window.location.reload(), 800);
+    } else {
+      showToast(data.error || "Failed to add reference", "danger");
+    }
+  } catch (err) {
+    showToast("Error saving reference: " + err, "danger");
+  }
+});
+
+// Export references
+document.querySelectorAll(".export-ref-link").forEach(link => {
+  link.addEventListener("click", async function(e) {
+    e.preventDefault();
+    const fmt = this.dataset.format;
+    try {
+      const res = await fetch(`/api/references/export?format=${fmt}`);
+      const data = await res.json();
+      if (data.success && data.download_url) {
+        window.location.href = data.download_url;
+        showToast(`Exported references as ${fmt.toUpperCase()}!`, "success");
+      } else {
+        showToast(data.error || "Export failed", "danger");
+      }
+    } catch (err) {
+      showToast("Error exporting references: " + err, "danger");
+    }
+  });
+});
+</script>
+{% endblock %}
