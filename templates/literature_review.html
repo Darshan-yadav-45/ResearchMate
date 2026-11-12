@@ -184,7 +184,11 @@ document.getElementById("lit-review-form").addEventListener("submit", async func
           <div class="alert alert-warning border-warning">
             <h5 class="fw-bold"><i class="bi bi-exclamation-triangle"></i> IBM Granite Credentials Required</h5>
             <p>${data.error}</p>
-            <a href="/settings" class="btn btn-sm btn-dark">Open Settings</a>
+            {% if current_user.is_authenticated and current_user.role == 'admin' %}
+            <a href="{{ url_for('views.settings') }}" class="btn btn-sm btn-dark">Configure IBM watsonx.ai &amp; Granite Settings</a>
+            {% else %}
+            <span class="badge bg-secondary-subtle text-dark border p-2">Contact System Administrator to configure IBM watsonx credentials</span>
+            {% endif %}
           </div>
         `;
         empty.classList.add("d-none");

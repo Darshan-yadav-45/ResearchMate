@@ -28,7 +28,7 @@
     </div>
   </div>
   {% if current_user.is_authenticated and current_user.role == 'admin' %}
-  <a href="{{ url_for('views.settings') }}" class="btn btn-sm btn-dark">Configure IBM Granite Now</a>
+  <a href="{{ url_for('views.settings') }}" class="btn btn-sm btn-dark"><i class="bi bi-gear-fill me-1"></i> Configure IBM watsonx.ai &amp; Granite Settings</a>
   {% else %}
   <span class="badge bg-dark-subtle text-dark border px-3 py-2" style="font-size: 0.8rem;">
     <i class="bi bi-info-circle me-1"></i> Contact Administrator to configure watsonx
