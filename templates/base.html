@@ -139,11 +139,54 @@
             <span>IBM Granite Setup Required</span>
           </a>
         {% endif %}
+
+        {% if current_user.is_authenticated %}
+        <div class="dropdown">
+          <button class="btn btn-sm btn-light border d-flex align-items-center gap-2 py-1 px-2 rounded-pill shadow-sm" type="button" data-bs-toggle="dropdown">
+            <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center fw-bold" style="width: 28px; height: 28px; font-size: 0.75rem;">
+              {{ current_user.full_name[:2].upper() if current_user.full_name else 'RE' }}
+            </div>
+            <span class="small fw-semibold text-dark d-none d-sm-inline">{{ current_user.full_name }}</span>
+            <i class="bi bi-chevron-down small text-muted"></i>
+          </button>
+          <ul class="dropdown-menu dropdown-menu-end shadow border-0 py-2" style="font-size: 0.88rem; min-width: 220px;">
+            <li class="px-3 py-1">
+              <div class="fw-bold text-dark">{{ current_user.full_name }}</div>
+              <small class="text-muted d-block">{{ current_user.email }}</small>
+              <small class="text-primary d-block">{{ current_user.institution }}</small>
+            </li>
+            <li><hr class="dropdown-divider"></li>
+            <li>
+              <a class="dropdown-item py-2" href="{{ url_for('views.settings') }}">
+                <i class="bi bi-gear me-2 text-secondary"></i> watsonx Settings
+              </a>
+            </li>
+            <li>
+              <a class="dropdown-item py-2 text-danger" href="{{ url_for('auth.logout') }}">
+                <i class="bi bi-box-arrow-right me-2 text-danger"></i> Sign Out
+              </a>
+            </li>
+          </ul>
+        </div>
+        {% else %}
+        <a href="{{ url_for('auth.login') }}" class="btn btn-sm btn-primary">Sign In</a>
+        {% endif %}
       </div>
     </header>
 
     <!-- Page Content -->
     <main class="content-wrapper">
+      <!-- Flash Messages -->
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, message in messages %}
+            <div class="alert alert-{{ category }} alert-dismissible fade show py-2 mb-3 shadow-sm" role="alert">
+              {{ message }}
+              <button type="button" class="btn-close py-2" data-bs-dismiss="alert"></button>
+            </div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
       {% block content %}{% endblock %}
     </main>
 

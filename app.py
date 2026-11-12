@@ -5,12 +5,14 @@ import logging
 from pathlib import Path
 from flask import Flask, render_template, jsonify
 from flask_cors import CORS
+from flask_login import LoginManager
 
 from config import Config
 from database.db import db
-from database.models import PaperChunk, Project
+from database.models import User, PaperChunk, Project
 from routes.views import views_bp
 from routes.api import api_bp
+from routes.auth import auth_bp
 from rag.rag_engine import global_vector_store
 
 # Configure logging
@@ -19,6 +21,8 @@ logging.basicConfig(
     format="[%(asctime)s] [%(levelname)s] [%(name)s]: %(message)s",
 )
 logger = logging.getLogger("ResearchMate")
+
+login_manager = LoginManager()
 
 
 def create_app(config_class=Config):
@@ -31,12 +35,21 @@ def create_app(config_class=Config):
 
     # Initialize extensions
     db.init_app(app)
+    login_manager.init_app(app)
+    login_manager.login_view = "auth.login"
+    login_manager.login_message = "Please sign in to access your ResearchMate workspace."
+    login_manager.login_message_category = "info"
+
+    @login_manager.user_loader
+    def load_user(user_id):
+        return User.query.get(int(user_id))
 
     # Ensure required runtime folders exist
     Path(app.config["UPLOAD_FOLDER"]).mkdir(parents=True, exist_ok=True)
     Path(app.config["EXPORT_FOLDER"]).mkdir(parents=True, exist_ok=True)
 
     # Register blueprints
+    app.register_blueprint(auth_bp)
     app.register_blueprint(views_bp)
     app.register_blueprint(api_bp)
 
@@ -91,6 +104,20 @@ def create_app(config_class=Config):
             )
             db.session.add(default_proj)
             db.session.commit()
+
+        # Seed default academic researcher account if empty
+        if User.query.count() == 0:
+            demo_user = User(
+                username="researcher",
+                email="researcher@ibm.aicte.edu",
+                full_name="Dr. Alex Rivera",
+                institution="AICTE - IBM SkillsBuild",
+                role="Lead Researcher",
+            )
+            demo_user.set_password("Password123!")
+            db.session.add(demo_user)
+            db.session.commit()
+            logger.info("Created default academic researcher account (researcher / Password123!)")
 
         # Populate vector store from existing chunks in database
         try:

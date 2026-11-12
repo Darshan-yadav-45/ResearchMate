@@ -21,7 +21,15 @@ def client(tmp_path):
 
 
 def test_views_load(client):
-    """Test that all 10 frontend web routes render successfully."""
+    """Test that all 10 frontend web routes render successfully for logged in user."""
+    # Authenticate with seeded demo account
+    login_res = client.post(
+        "/login",
+        data={"identity": "researcher", "password": "Password123!"},
+        follow_redirects=True,
+    )
+    assert login_res.status_code == 200
+
     endpoints = [
         "/",
         "/question-analyzer",

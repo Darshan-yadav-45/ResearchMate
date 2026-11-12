@@ -265,6 +265,12 @@ Open your browser and navigate to:
 http://127.0.0.1:5000
 ```
 
+### Default Academic Researcher Login Credentials:
+You can log in with the pre-seeded account or click the **"Quick Demo Login"** button on the login screen:
+- **Username:** `researcher` *(or `researcher@ibm.aicte.edu`)*
+- **Password:** `Password123!`
+- *Or register a new researcher account at `/register`.*
+
 ---
 
 ## 7. Testing Instructions

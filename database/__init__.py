@@ -1,6 +1,7 @@
 """Database package."""
 from database.db import db
 from database.models import (
+    User,
     Project,
     Paper,
     PaperChunk,
@@ -14,6 +15,7 @@ from database.models import (
 
 __all__ = [
     "db",
+    "User",
     "Project",
     "Paper",
     "PaperChunk",
