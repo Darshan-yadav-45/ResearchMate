@@ -227,7 +227,7 @@ IBM_GRANITE_MODEL_ID=ibm/granite-13b-chat-v2
 
 ### Step 1: Clone the Repository
 ```bash
-git clone https://github.com/<your-username>/ResearchMate.git
+git clone https://github.com/Darshan-yadav-45/ResearchMate.git
 cd ResearchMate
 ```
 
@@ -310,13 +310,12 @@ git commit -m "feat: initial commit of ResearchMate AI-Powered Research Agent (I
 5. Click **Create repository**.
 
 ### Step 4: Link Remote and Push to GitHub
-Replace `<your-username>` with your GitHub username:
 ```bash
 # Rename branch to main
 git branch -M main
 
 # Add your GitHub remote repository URL
-git remote add origin https://github.com/<your-username>/ResearchMate.git
+git remote add origin https://github.com/Darshan-yadav-45/ResearchMate.git
 
 # Push code to GitHub
 git push -u origin main
@@ -440,3 +439,4 @@ Use this checklist during your project demonstration for the AICTE–IBM SkillsB
 ---
 
 *Developed for the AICTE–IBM SkillsBuild Project Demonstration | Problem Statement No. 1: Research Agent*
+
