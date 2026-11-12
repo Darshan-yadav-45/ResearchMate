@@ -265,7 +265,7 @@ http://127.0.0.1:5000
 ```
 
 ### Default Academic Researcher Login Credentials:
-You can log in with the pre-seeded account or click the **"Quick Demo Login"** button on the login screen:
+You can log in with the pre-seeded account:
 - **Username:** `researcher` *(or `researcher@researchmate.org`)*
 - **Password:** `Password123!`
 - *Or register a new researcher account at `/register`.*

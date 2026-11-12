@@ -38,7 +38,7 @@ def test_login_page_renders(auth_client):
     res = auth_client.get("/login")
     assert res.status_code == 200
     assert b"Sign In to Workspace" in res.data
-    assert b"Quick Demo Login" in res.data
+    assert b"Username or Email" in res.data
 
 
 def test_register_page_renders(auth_client):

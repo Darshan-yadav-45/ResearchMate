@@ -37,8 +37,7 @@ def create_app(config_class=Config):
     db.init_app(app)
     login_manager.init_app(app)
     login_manager.login_view = "auth.login"
-    login_manager.login_message = "Please sign in to access your ResearchMate workspace."
-    login_manager.login_message_category = "info"
+    login_manager.login_message = None
 
     @login_manager.user_loader
     def load_user(user_id):
