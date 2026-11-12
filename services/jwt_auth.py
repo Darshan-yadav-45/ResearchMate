@@ -10,7 +10,6 @@ from flask import request, jsonify, current_app
 from flask_login import current_user
 
 from config import Config
-from database.db import db
 from database.models import User
 
 logger = logging.getLogger(__name__)
@@ -103,7 +102,7 @@ def jwt_required(f):
                 }), 401
 
             user_id = payload.get("user_id")
-            user = db.session.get(User, user_id)
+            user = User.query.get(user_id)
             if not user:
                 return jsonify({
                     "success": False,
@@ -142,7 +141,7 @@ def admin_jwt_required(f):
         if token:
             payload = decode_jwt_token(token)
             if payload and payload.get("user_id"):
-                user = db.session.get(User, payload["user_id"])
+                user = User.query.get(payload["user_id"])
         elif current_user.is_authenticated:
             user = current_user
 
@@ -162,3 +161,4 @@ def admin_jwt_required(f):
         return f(*args, **kwargs)
 
     return decorated
+

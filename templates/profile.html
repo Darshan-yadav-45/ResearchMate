@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}User Profile &amp; JWT – ResearchMate{% endblock %}
+{% block title %}User Profile – ResearchMate{% endblock %}
 
 {% block content %}
 <div class="container-fluid px-0">
@@ -8,9 +8,9 @@
   <!-- Header -->
   <div class="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-4">
     <div>
-      <h2 class="fw-bold tracking-tight mb-1 text-dark">User Profile &amp; API Access</h2>
+      <h2 class="fw-bold tracking-tight mb-1 text-dark">User Profile</h2>
       <p class="text-muted mb-0" style="font-size: 0.92rem;">
-        Manage your researcher credentials, institutional affiliation, and JSON Web Token (JWT) authentication.
+        Manage your researcher profile, institutional affiliation, and account security.
       </p>
     </div>
     <div>
@@ -93,13 +93,8 @@
     <div class="card-header bg-white border-bottom px-4 pt-3 pb-0">
       <ul class="nav nav-tabs card-header-tabs" id="profileTabs" role="tablist">
         <li class="nav-item" role="presentation">
-          <button class="nav-link active fw-semibold" id="jwt-tab" data-bs-toggle="tab" data-bs-target="#jwt" type="button" role="tab">
-            <i class="bi bi-key-fill text-primary me-2"></i>JWT API Authentication
-          </button>
-        </li>
-        <li class="nav-item" role="presentation">
-          <button class="nav-link fw-semibold" id="info-tab" data-bs-toggle="tab" data-bs-target="#info" type="button" role="tab">
-            <i class="bi bi-person-lines-fill text-secondary me-2"></i>Edit Profile
+          <button class="nav-link active fw-semibold" id="info-tab" data-bs-toggle="tab" data-bs-target="#info" type="button" role="tab">
+            <i class="bi bi-person-lines-fill text-primary me-2"></i>Edit Profile
           </button>
         </li>
         <li class="nav-item" role="presentation">
@@ -113,76 +108,8 @@
     <div class="card-body p-4">
       <div class="tab-content" id="profileTabsContent">
 
-        <!-- Tab 1: JWT Authentication -->
-        <div class="tab-pane fade show active" id="jwt" role="tabpanel">
-          <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
-            <div>
-              <h5 class="fw-bold text-dark mb-1">JSON Web Token (JWT)</h5>
-              <p class="text-muted small mb-0">
-                Use this signed Bearer token to authenticate automated scripts, pipelines, and external REST API clients.
-              </p>
-            </div>
-            <div class="d-flex align-items-center gap-2">
-              <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">
-                <i class="bi bi-check-circle-fill me-1"></i> Algorithm: HS256
-              </span>
-              <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1">
-                <i class="bi bi-clock-history me-1"></i> Valid for 24 Hours
-              </span>
-            </div>
-          </div>
-
-          <!-- Token Container -->
-          <div class="position-relative mb-4">
-            <label class="form-label fw-semibold small text-muted">Active JWT Access Token</label>
-            <div class="p-3 bg-dark text-light rounded-3 font-monospace position-relative" style="font-size: 0.82rem; word-break: break-all; min-height: 90px;" id="tokenDisplayBox">
-              <span id="jwtTokenText">{{ jwt_token }}</span>
-            </div>
-            <div class="d-flex align-items-center gap-2 mt-2">
-              <button class="btn btn-sm btn-primary d-flex align-items-center gap-1 shadow-sm" type="button" id="copyTokenBtn">
-                <i class="bi bi-clipboard"></i> <span id="copyBtnText">Copy JWT Token</span>
-              </button>
-              <button class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1" type="button" id="refreshTokenBtn">
-                <i class="bi bi-arrow-repeat"></i> <span>Generate Fresh Token</span>
-              </button>
-            </div>
-          </div>
-
-          <!-- Integration Quick Start -->
-          <div class="card bg-light border-0 p-3 mb-3" style="border-radius: 10px;">
-            <h6 class="fw-bold text-dark mb-2"><i class="bi bi-code-slash text-primary me-2"></i>REST API Quick Start</h6>
-            <p class="text-muted small mb-3">
-              Pass your JWT token in the <code>Authorization</code> HTTP header using the <code>Bearer &lt;token&gt;</code> scheme:
-            </p>
-
-            <div class="mb-3">
-              <span class="badge bg-secondary mb-1">cURL (Verify Profile)</span>
-              <pre class="bg-dark text-white p-2 rounded small m-0" style="font-size: 0.8rem; overflow-x: auto;">curl -X GET http://127.0.0.1:5000/api/auth/profile \
-  -H "Authorization: Bearer <span class="text-warning">&lt;YOUR_JWT_TOKEN&gt;</span>"</pre>
-            </div>
-
-            <div class="mb-3">
-              <span class="badge bg-secondary mb-1">Python (requests)</span>
-              <pre class="bg-dark text-white p-2 rounded small m-0" style="font-size: 0.8rem; overflow-x: auto;">import requests
-
-token = "<span class="text-warning">{{ jwt_token[:30] }}...</span>"
-headers = {"Authorization": f"Bearer {token}"}
-
-response = requests.get("http://127.0.0.1:5000/api/auth/profile", headers=headers)
-print(response.json())</pre>
-            </div>
-
-            <div>
-              <span class="badge bg-secondary mb-1">API Token Endpoint</span>
-              <pre class="bg-dark text-white p-2 rounded small m-0" style="font-size: 0.8rem; overflow-x: auto;">curl -X POST http://127.0.0.1:5000/api/auth/token \
-  -H "Content-Type: application/json" \
-  -d '{"username": "{{ current_user.username }}", "password": "&lt;your_password&gt;"}'</pre>
-            </div>
-          </div>
-        </div>
-
-        <!-- Tab 2: Edit Profile -->
-        <div class="tab-pane fade" id="info" role="tabpanel">
+        <!-- Tab 1: Edit Profile -->
+        <div class="tab-pane fade show active" id="info" role="tabpanel">
           <h5 class="fw-bold text-dark mb-3">Edit Profile Information</h5>
           <form method="POST" action="{{ url_for('auth.update_profile') }}" style="max-width: 600px;">
             <div class="mb-3">
@@ -208,7 +135,7 @@ print(response.json())</pre>
           </form>
         </div>
 
-        <!-- Tab 3: Security & Password -->
+        <!-- Tab 2: Security & Password -->
         <div class="tab-pane fade" id="security" role="tabpanel">
           <h5 class="fw-bold text-dark mb-3">Change Password</h5>
           <form method="POST" action="{{ url_for('auth.change_password') }}" style="max-width: 600px;">
@@ -235,64 +162,4 @@ print(response.json())</pre>
   </div>
 
 </div>
-{% endblock %}
-
-{% block extra_js %}
-<script>
-document.addEventListener("DOMContentLoaded", function () {
-  const copyBtn = document.getElementById("copyTokenBtn");
-  const copyBtnText = document.getElementById("copyBtnText");
-  const tokenText = document.getElementById("jwtTokenText");
-  const refreshBtn = document.getElementById("refreshTokenBtn");
-
-  // Copy JWT Token to Clipboard
-  if (copyBtn) {
-    copyBtn.addEventListener("click", function () {
-      const token = tokenText.innerText.trim();
-      navigator.clipboard.writeText(token).then(() => {
-        copyBtnText.textContent = "Copied to Clipboard!";
-        copyBtn.classList.remove("btn-primary");
-        copyBtn.classList.add("btn-success");
-        setTimeout(() => {
-          copyBtnText.textContent = "Copy JWT Token";
-          copyBtn.classList.remove("btn-success");
-          copyBtn.classList.add("btn-primary");
-        }, 2000);
-      }).catch(err => {
-        alert("Failed to copy token: " + err);
-      });
-    });
-  }
-
-  // Refresh JWT Token via API
-  if (refreshBtn) {
-    refreshBtn.addEventListener("click", async function () {
-      refreshBtn.disabled = true;
-      refreshBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Refreshing...';
-
-      try {
-        const res = await fetch("/api/auth/refresh", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": "Bearer " + tokenText.innerText.trim()
-          }
-        });
-        const data = await res.json();
-        if (data.success && data.token) {
-          tokenText.innerText = data.token;
-          alert("Fresh JWT token generated successfully!");
-        } else {
-          alert("Error refreshing token: " + (data.error || "Unknown error"));
-        }
-      } catch (err) {
-        alert("Request failed: " + err);
-      } finally {
-        refreshBtn.disabled = false;
-        refreshBtn.innerHTML = '<i class="bi bi-arrow-repeat"></i> <span>Generate Fresh Token</span>';
-      }
-    });
-  }
-});
-</script>
 {% endblock %}

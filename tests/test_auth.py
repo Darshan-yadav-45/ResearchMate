@@ -158,12 +158,12 @@ def test_api_settings_admin_only(auth_client):
 # ==============================================================================
 
 def test_user_profile_view(auth_client):
-    """Logged in user can view profile page with JWT token."""
+    """Logged in user can view profile page."""
     auth_client.post("/login", data={"identity": "researcher", "password": "Password123!"})
     res = auth_client.get("/profile")
     assert res.status_code == 200
     assert b"User Profile" in res.data
-    assert b"JSON Web Token" in res.data
+    assert b"Edit Profile" in res.data
     assert b"Dr. Alex Rivera" in res.data
 
 
