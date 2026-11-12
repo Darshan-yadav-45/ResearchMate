@@ -27,6 +27,11 @@ class User(db.Model, UserMixin):
     def check_password(self, password: str) -> bool:
         return check_password_hash(self.password_hash, password)
 
+    @property
+    def is_admin(self) -> bool:
+        """Returns True if the user has administrator privileges."""
+        return self.role == "admin"
+
     def to_dict(self):
         return {
             "id": self.id,

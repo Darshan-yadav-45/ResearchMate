@@ -1,0 +1,298 @@
+{% extends "base.html" %}
+
+{% block title %}User Profile &amp; JWT – ResearchMate{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+
+  <!-- Header -->
+  <div class="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-4">
+    <div>
+      <h2 class="fw-bold tracking-tight mb-1 text-dark">User Profile &amp; API Access</h2>
+      <p class="text-muted mb-0" style="font-size: 0.92rem;">
+        Manage your researcher credentials, institutional affiliation, and JSON Web Token (JWT) authentication.
+      </p>
+    </div>
+    <div>
+      {% if current_user.role == 'admin' %}
+      <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-3 py-2 fs-6">
+        <i class="bi bi-shield-check me-1"></i> Administrator Account
+      </span>
+      {% else %}
+      <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-2 fs-6">
+        <i class="bi bi-mortarboard me-1"></i> Academic Researcher
+      </span>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Profile Overview Card -->
+  <div class="card border-0 shadow-sm mb-4" style="border-radius: 14px; overflow: hidden;">
+    <div class="card-body p-4">
+      <div class="d-flex align-items-center gap-4 flex-wrap flex-sm-nowrap">
+        <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center fw-bold shadow flex-shrink-0"
+          style="width: 80px; height: 80px; font-size: 1.85rem; letter-spacing: -0.02em;">
+          {{ current_user.full_name[:2].upper() if current_user.full_name else 'RE' }}
+        </div>
+        <div class="flex-grow-1">
+          <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
+            <h4 class="fw-bold text-dark mb-0">{{ current_user.full_name }}</h4>
+            {% if current_user.role == 'admin' %}
+            <span class="badge bg-danger" style="font-size: 0.72rem;">Admin</span>
+            {% else %}
+            <span class="badge bg-primary" style="font-size: 0.72rem;">Researcher</span>
+            {% endif %}
+          </div>
+          <div class="text-muted small mb-2 d-flex align-items-center gap-3 flex-wrap">
+            <span><i class="bi bi-person me-1"></i>@{{ current_user.username }}</span>
+            <span><i class="bi bi-envelope me-1"></i>{{ current_user.email }}</span>
+            <span><i class="bi bi-building me-1"></i>{{ current_user.institution }}</span>
+          </div>
+          <div class="text-secondary" style="font-size: 0.8rem;">
+            <i class="bi bi-calendar3 me-1"></i>Member since: <strong>{{ current_user.created_at.strftime('%B %d, %Y') }}</strong>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick Stats -->
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+      <div class="card border-0 shadow-sm p-3 h-100" style="border-radius: 12px;">
+        <div class="text-muted small fw-semibold text-uppercase">Surveyed Papers</div>
+        <div class="fs-3 fw-bold text-dark mt-1">{{ papers_count }}</div>
+        <small class="text-primary mt-1"><i class="bi bi-file-earmark-pdf me-1"></i>RAG Library</small>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card border-0 shadow-sm p-3 h-100" style="border-radius: 12px;">
+        <div class="text-muted small fw-semibold text-uppercase">Literature Reviews</div>
+        <div class="fs-3 fw-bold text-dark mt-1">{{ reviews_count }}</div>
+        <small class="text-success mt-1"><i class="bi bi-book me-1"></i>Synthesized</small>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card border-0 shadow-sm p-3 h-100" style="border-radius: 12px;">
+        <div class="text-muted small fw-semibold text-uppercase">Research Gaps</div>
+        <div class="fs-3 fw-bold text-dark mt-1">{{ gaps_count }}</div>
+        <small class="text-warning mt-1"><i class="bi bi-puzzle me-1"></i>Identified</small>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card border-0 shadow-sm p-3 h-100" style="border-radius: 12px;">
+        <div class="text-muted small fw-semibold text-uppercase">Draft Reports</div>
+        <div class="fs-3 fw-bold text-dark mt-1">{{ reports_count }}</div>
+        <small class="text-info mt-1"><i class="bi bi-file-text me-1"></i>Generated</small>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tabs Navigation -->
+  <div class="card border-0 shadow-sm" style="border-radius: 14px;">
+    <div class="card-header bg-white border-bottom px-4 pt-3 pb-0">
+      <ul class="nav nav-tabs card-header-tabs" id="profileTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+          <button class="nav-link active fw-semibold" id="jwt-tab" data-bs-toggle="tab" data-bs-target="#jwt" type="button" role="tab">
+            <i class="bi bi-key-fill text-primary me-2"></i>JWT API Authentication
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link fw-semibold" id="info-tab" data-bs-toggle="tab" data-bs-target="#info" type="button" role="tab">
+            <i class="bi bi-person-lines-fill text-secondary me-2"></i>Edit Profile
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link fw-semibold" id="security-tab" data-bs-toggle="tab" data-bs-target="#security" type="button" role="tab">
+            <i class="bi bi-shield-lock text-secondary me-2"></i>Security &amp; Password
+          </button>
+        </li>
+      </ul>
+    </div>
+
+    <div class="card-body p-4">
+      <div class="tab-content" id="profileTabsContent">
+
+        <!-- Tab 1: JWT Authentication -->
+        <div class="tab-pane fade show active" id="jwt" role="tabpanel">
+          <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+            <div>
+              <h5 class="fw-bold text-dark mb-1">JSON Web Token (JWT)</h5>
+              <p class="text-muted small mb-0">
+                Use this signed Bearer token to authenticate automated scripts, pipelines, and external REST API clients.
+              </p>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+              <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">
+                <i class="bi bi-check-circle-fill me-1"></i> Algorithm: HS256
+              </span>
+              <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1">
+                <i class="bi bi-clock-history me-1"></i> Valid for 24 Hours
+              </span>
+            </div>
+          </div>
+
+          <!-- Token Container -->
+          <div class="position-relative mb-4">
+            <label class="form-label fw-semibold small text-muted">Active JWT Access Token</label>
+            <div class="p-3 bg-dark text-light rounded-3 font-monospace position-relative" style="font-size: 0.82rem; word-break: break-all; min-height: 90px;" id="tokenDisplayBox">
+              <span id="jwtTokenText">{{ jwt_token }}</span>
+            </div>
+            <div class="d-flex align-items-center gap-2 mt-2">
+              <button class="btn btn-sm btn-primary d-flex align-items-center gap-1 shadow-sm" type="button" id="copyTokenBtn">
+                <i class="bi bi-clipboard"></i> <span id="copyBtnText">Copy JWT Token</span>
+              </button>
+              <button class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1" type="button" id="refreshTokenBtn">
+                <i class="bi bi-arrow-repeat"></i> <span>Generate Fresh Token</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Integration Quick Start -->
+          <div class="card bg-light border-0 p-3 mb-3" style="border-radius: 10px;">
+            <h6 class="fw-bold text-dark mb-2"><i class="bi bi-code-slash text-primary me-2"></i>REST API Quick Start</h6>
+            <p class="text-muted small mb-3">
+              Pass your JWT token in the <code>Authorization</code> HTTP header using the <code>Bearer &lt;token&gt;</code> scheme:
+            </p>
+
+            <div class="mb-3">
+              <span class="badge bg-secondary mb-1">cURL (Verify Profile)</span>
+              <pre class="bg-dark text-white p-2 rounded small m-0" style="font-size: 0.8rem; overflow-x: auto;">curl -X GET http://127.0.0.1:5000/api/auth/profile \
+  -H "Authorization: Bearer <span class="text-warning">&lt;YOUR_JWT_TOKEN&gt;</span>"</pre>
+            </div>
+
+            <div class="mb-3">
+              <span class="badge bg-secondary mb-1">Python (requests)</span>
+              <pre class="bg-dark text-white p-2 rounded small m-0" style="font-size: 0.8rem; overflow-x: auto;">import requests
+
+token = "<span class="text-warning">{{ jwt_token[:30] }}...</span>"
+headers = {"Authorization": f"Bearer {token}"}
+
+response = requests.get("http://127.0.0.1:5000/api/auth/profile", headers=headers)
+print(response.json())</pre>
+            </div>
+
+            <div>
+              <span class="badge bg-secondary mb-1">API Token Endpoint</span>
+              <pre class="bg-dark text-white p-2 rounded small m-0" style="font-size: 0.8rem; overflow-x: auto;">curl -X POST http://127.0.0.1:5000/api/auth/token \
+  -H "Content-Type: application/json" \
+  -d '{"username": "{{ current_user.username }}", "password": "&lt;your_password&gt;"}'</pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 2: Edit Profile -->
+        <div class="tab-pane fade" id="info" role="tabpanel">
+          <h5 class="fw-bold text-dark mb-3">Edit Profile Information</h5>
+          <form method="POST" action="{{ url_for('auth.update_profile') }}" style="max-width: 600px;">
+            <div class="mb-3">
+              <label class="form-label fw-semibold small text-secondary">Username</label>
+              <input type="text" class="form-control bg-light" value="{{ current_user.username }}" readonly disabled>
+              <small class="text-muted">Username is unique and cannot be changed.</small>
+            </div>
+            <div class="mb-3">
+              <label for="full_name" class="form-label fw-semibold small text-secondary">Full Name</label>
+              <input type="text" class="form-control" id="full_name" name="full_name" value="{{ current_user.full_name }}" required>
+            </div>
+            <div class="mb-3">
+              <label for="email" class="form-label fw-semibold small text-secondary">Email Address</label>
+              <input type="email" class="form-control" id="email" name="email" value="{{ current_user.email }}" required>
+            </div>
+            <div class="mb-4">
+              <label for="institution" class="form-label fw-semibold small text-secondary">Academic Institution / Organization</label>
+              <input type="text" class="form-control" id="institution" name="institution" value="{{ current_user.institution }}" required>
+            </div>
+            <button type="submit" class="btn btn-primary fw-semibold px-4 shadow-sm">
+              <i class="bi bi-check-lg me-1"></i> Save Changes
+            </button>
+          </form>
+        </div>
+
+        <!-- Tab 3: Security & Password -->
+        <div class="tab-pane fade" id="security" role="tabpanel">
+          <h5 class="fw-bold text-dark mb-3">Change Password</h5>
+          <form method="POST" action="{{ url_for('auth.change_password') }}" style="max-width: 600px;">
+            <div class="mb-3">
+              <label for="current_password" class="form-label fw-semibold small text-secondary">Current Password</label>
+              <input type="password" class="form-control" id="current_password" name="current_password" placeholder="Enter current password" required>
+            </div>
+            <div class="mb-3">
+              <label for="new_password" class="form-label fw-semibold small text-secondary">New Password</label>
+              <input type="password" class="form-control" id="new_password" name="new_password" placeholder="At least 6 characters" minlength="6" required>
+            </div>
+            <div class="mb-4">
+              <label for="confirm_password" class="form-label fw-semibold small text-secondary">Confirm New Password</label>
+              <input type="password" class="form-control" id="confirm_password" name="confirm_password" placeholder="Re-enter new password" minlength="6" required>
+            </div>
+            <button type="submit" class="btn btn-warning fw-semibold px-4 shadow-sm text-dark">
+              <i class="bi bi-shield-check me-1"></i> Update Password
+            </button>
+          </form>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  const copyBtn = document.getElementById("copyTokenBtn");
+  const copyBtnText = document.getElementById("copyBtnText");
+  const tokenText = document.getElementById("jwtTokenText");
+  const refreshBtn = document.getElementById("refreshTokenBtn");
+
+  // Copy JWT Token to Clipboard
+  if (copyBtn) {
+    copyBtn.addEventListener("click", function () {
+      const token = tokenText.innerText.trim();
+      navigator.clipboard.writeText(token).then(() => {
+        copyBtnText.textContent = "Copied to Clipboard!";
+        copyBtn.classList.remove("btn-primary");
+        copyBtn.classList.add("btn-success");
+        setTimeout(() => {
+          copyBtnText.textContent = "Copy JWT Token";
+          copyBtn.classList.remove("btn-success");
+          copyBtn.classList.add("btn-primary");
+        }, 2000);
+      }).catch(err => {
+        alert("Failed to copy token: " + err);
+      });
+    });
+  }
+
+  // Refresh JWT Token via API
+  if (refreshBtn) {
+    refreshBtn.addEventListener("click", async function () {
+      refreshBtn.disabled = true;
+      refreshBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Refreshing...';
+
+      try {
+        const res = await fetch("/api/auth/refresh", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + tokenText.innerText.trim()
+          }
+        });
+        const data = await res.json();
+        if (data.success && data.token) {
+          tokenText.innerText = data.token;
+          alert("Fresh JWT token generated successfully!");
+        } else {
+          alert("Error refreshing token: " + (data.error || "Unknown error"));
+        }
+      } catch (err) {
+        alert("Request failed: " + err);
+      } finally {
+        refreshBtn.disabled = false;
+        refreshBtn.innerHTML = '<i class="bi bi-arrow-repeat"></i> <span>Generate Fresh Token</span>';
+      }
+    });
+  }
+});
+</script>
+{% endblock %}

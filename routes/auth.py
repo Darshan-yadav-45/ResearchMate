@@ -174,3 +174,103 @@ def logout():
     flash("You have been successfully logged out.", "info")
     return redirect(url_for("auth.login"))
 
+
+@auth_bp.route("/profile/update", methods=["POST"])
+@login_required
+def update_profile():
+    """Updates user profile information."""
+    if request.is_json:
+        data = request.get_json() or {}
+        full_name = data.get("full_name", "").strip()
+        email = data.get("email", "").strip()
+        institution = data.get("institution", "").strip()
+    else:
+        full_name = request.form.get("full_name", "").strip()
+        email = request.form.get("email", "").strip()
+        institution = request.form.get("institution", "").strip()
+
+    if not email:
+        msg = "Email address cannot be empty."
+        if request.is_json:
+            return jsonify({"success": False, "error": msg}), 400
+        flash(msg, "danger")
+        return redirect(url_for("views.profile"))
+
+    # Check if email is taken by another user
+    existing_user = User.query.filter(User.email.ilike(email), User.id != current_user.id).first()
+    if existing_user:
+        msg = "Email address is already in use by another account."
+        if request.is_json:
+            return jsonify({"success": False, "error": msg}), 400
+        flash(msg, "danger")
+        return redirect(url_for("views.profile"))
+
+    if full_name:
+        current_user.full_name = full_name
+    current_user.email = email
+    if institution:
+        current_user.institution = institution
+
+    db.session.commit()
+    logger.info(f"User {current_user.username} updated profile.")
+
+    msg = "Profile updated successfully."
+    if request.is_json:
+        return jsonify({"success": True, "message": msg, "user": current_user.to_dict()})
+    flash(msg, "success")
+    return redirect(url_for("views.profile"))
+
+
+@auth_bp.route("/profile/password", methods=["POST"])
+@login_required
+def change_password():
+    """Changes user password."""
+    if request.is_json:
+        data = request.get_json() or {}
+        current_password = data.get("current_password", "")
+        new_password = data.get("new_password", "")
+        confirm_password = data.get("confirm_password", "")
+    else:
+        current_password = request.form.get("current_password", "")
+        new_password = request.form.get("new_password", "")
+        confirm_password = request.form.get("confirm_password", "")
+
+    if not current_password or not new_password:
+        msg = "Current password and new password are required."
+        if request.is_json:
+            return jsonify({"success": False, "error": msg}), 400
+        flash(msg, "danger")
+        return redirect(url_for("views.profile"))
+
+    if not current_user.check_password(current_password):
+        msg = "Current password is incorrect."
+        if request.is_json:
+            return jsonify({"success": False, "error": msg}), 400
+        flash(msg, "danger")
+        return redirect(url_for("views.profile"))
+
+    if len(new_password) < 6:
+        msg = "New password must be at least 6 characters long."
+        if request.is_json:
+            return jsonify({"success": False, "error": msg}), 400
+        flash(msg, "danger")
+        return redirect(url_for("views.profile"))
+
+    if new_password != confirm_password:
+        msg = "New passwords do not match."
+        if request.is_json:
+            return jsonify({"success": False, "error": msg}), 400
+        flash(msg, "danger")
+        return redirect(url_for("views.profile"))
+
+    current_user.set_password(new_password)
+    db.session.commit()
+    logger.info(f"User {current_user.username} changed their password.")
+
+    msg = "Password updated successfully."
+    if request.is_json:
+        return jsonify({"success": True, "message": msg})
+    flash(msg, "success")
+    return redirect(url_for("views.profile"))
+
+

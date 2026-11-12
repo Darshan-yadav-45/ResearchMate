@@ -12,6 +12,8 @@ load_dotenv(BASE_DIR / ".env")
 class Config:
     """Base application configuration."""
 
+    BASE_DIR = BASE_DIR
+
     # Secret key for session management and CSRF protection
     SECRET_KEY = os.getenv("SECRET_KEY", "researchmate-default-dev-secret-key-2026")
 

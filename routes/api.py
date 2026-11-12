@@ -6,10 +6,12 @@ import logging
 from pathlib import Path
 from werkzeug.utils import secure_filename
 from flask import Blueprint, request, jsonify, send_from_directory, current_app
+from flask_login import current_user
 
 from config import Config
 from database.db import db
 from database.models import (
+    User,
     Paper,
     PaperChunk,
     PaperSummary,
@@ -20,6 +22,7 @@ from database.models import (
     ResearchHistory,
     Project,
 )
+from services.jwt_auth import jwt_required, admin_jwt_required, generate_jwt_token
 from ai.watsonx_client import (
     WatsonxClient,
     WatsonxConfigurationError,
@@ -68,8 +71,74 @@ def log_history(action_type: str, title: str, summary: str = "", metadata: dict 
 
 
 # ==============================================================================
-# 0. System & Settings Endpoints
+# 0. System, Settings & JWT Auth Endpoints
 # ==============================================================================
+
+
+@api_bp.route("/auth/token", methods=["POST"])
+def get_auth_token():
+    """Generates a signed JWT access token using researcher/admin credentials."""
+    data = request.get_json() or {}
+    identity = (data.get("username") or data.get("identity") or "").strip()
+    password = data.get("password", "")
+
+    if not identity or not password:
+        return jsonify({
+            "success": False,
+            "error": "Username/email and password are required.",
+        }), 400
+
+    user = User.query.filter(
+        (User.username.ilike(identity)) | (User.email.ilike(identity))
+    ).first()
+
+    if not user or not user.check_password(password):
+        return jsonify({
+            "success": False,
+            "error": "Invalid username or password.",
+        }), 401
+
+    token = generate_jwt_token(user)
+    return jsonify({
+        "success": True,
+        "token": token,
+        "token_type": "Bearer",
+        "expires_in": 86400,
+        "user": user.to_dict(),
+    })
+
+
+@api_bp.route("/auth/profile", methods=["GET"])
+@jwt_required
+def get_jwt_profile():
+    """Returns the authenticated user's profile info via JWT."""
+    user = getattr(request, "jwt_user", current_user)
+    return jsonify({
+        "success": True,
+        "user": user.to_dict(),
+        "stats": {
+            "papers": Paper.query.count(),
+            "literature_reviews": LiteratureReview.query.count(),
+            "research_gaps": ResearchGap.query.count(),
+            "references": ReferenceItem.query.count(),
+            "reports": ReportDraft.query.count(),
+        }
+    })
+
+
+@api_bp.route("/auth/refresh", methods=["POST"])
+@jwt_required
+def refresh_jwt_token():
+    """Refreshes the current JWT token."""
+    user = getattr(request, "jwt_user", current_user)
+    new_token = generate_jwt_token(user)
+    return jsonify({
+        "success": True,
+        "token": new_token,
+        "token_type": "Bearer",
+        "expires_in": 86400,
+        "user": user.to_dict(),
+    })
 
 
 @api_bp.route("/status", methods=["GET"])
@@ -88,7 +157,14 @@ def get_status():
 
 @api_bp.route("/settings", methods=["POST"])
 def update_settings():
-    """Updates IBM watsonx.ai credentials in .env file and runtime."""
+    """Updates IBM watsonx.ai credentials in .env file and runtime (Admin Only)."""
+    user = getattr(request, "jwt_user", None) or (current_user if current_user.is_authenticated else None)
+    if not user or user.role != "admin":
+        return jsonify({
+            "success": False,
+            "error": "Forbidden: Administrator role required to configure IBM watsonx settings.",
+        }), 403
+
     data = request.get_json() or {}
     apikey = data.get("apikey", "").strip()
     project_id = data.get("project_id", "").strip()
@@ -144,7 +220,7 @@ def update_settings():
     except Exception as e:
         logger.warning(f"Could not persist settings to .env file: {e}")
 
-    log_history("UPDATE_SETTINGS", "IBM watsonx.ai settings updated")
+    log_history("UPDATE_SETTINGS", "IBM watsonx.ai settings updated by Administrator")
     return jsonify(
         {
             "success": True,
@@ -156,7 +232,14 @@ def update_settings():
 
 @api_bp.route("/settings/test", methods=["POST"])
 def test_watsonx():
-    """Tests IBM watsonx.ai connection with provided or saved credentials."""
+    """Tests IBM watsonx.ai connection with provided or saved credentials (Admin Only)."""
+    user = getattr(request, "jwt_user", None) or (current_user if current_user.is_authenticated else None)
+    if not user or user.role != "admin":
+        return jsonify({
+            "success": False,
+            "error": "Forbidden: Administrator role required to test IBM watsonx settings.",
+        }), 403
+
     data = request.get_json() or {}
     apikey = data.get("apikey", "").strip() or Config.WATSONX_APIKEY
     project_id = data.get("project_id", "").strip() or Config.WATSONX_PROJECT_ID

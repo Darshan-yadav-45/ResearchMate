@@ -264,15 +264,48 @@ Open your browser and navigate to:
 http://127.0.0.1:5000
 ```
 
-### Default Academic Researcher Login Credentials:
-You can log in with the pre-seeded account:
+### Default Login Credentials:
+
+#### 1. System Administrator (Admin)
+- **Username:** `admin` *(or `admin@researchmate.org`)*
+- **Password:** `Admin123!`
+- **Privileges:** Full access to **IBM watsonx.ai & Granite Settings**, system credentials configuration, and all research modules.
+
+#### 2. Academic Researcher
 - **Username:** `researcher` *(or `researcher@researchmate.org`)*
 - **Password:** `Password123!`
+- **Privileges:** Full access to Academic Research workspace, 7 Research Modules, PDF Analyzer, RAG Grounded Query, Reference Manager, and User Profile with JWT API access.
 - *Or register a new researcher account at `/register`.*
 
 ---
 
-## 7. Testing Instructions
+## 7. JSON Web Token (JWT) API Authentication
+
+ResearchMate includes enterprise-grade **JWT (JSON Web Token)** authentication for automated academic workflows, script integration, and REST API access:
+
+- **Algorithm:** HMAC-SHA256 (HS256)
+- **Token Validity:** 24 Hours
+- **User Profile UI:** Located in the sidebar workspace under `/profile` (directly after Research History), with one-click token copying and token refresh.
+- **REST Endpoints:**
+  - `POST /api/auth/token` – Exchange username/password for a signed JWT access token.
+  - `GET /api/auth/profile` – Fetch current user profile using `Authorization: Bearer <TOKEN>`.
+  - `POST /api/auth/refresh` – Issue a fresh JWT access token.
+
+### Quick Example with cURL:
+```bash
+# 1. Obtain JWT Token
+curl -X POST http://127.0.0.1:5000/api/auth/token \
+  -H "Content-Type: application/json" \
+  -d '{"username": "researcher", "password": "Password123!"}'
+
+# 2. Access Protected Profile Endpoint
+curl -X GET http://127.0.0.1:5000/api/auth/profile \
+  -H "Authorization: Bearer <YOUR_JWT_TOKEN>"
+```
+
+---
+
+## 8. Testing Instructions
 
 ResearchMate includes a complete test suite covering all modules:
 
@@ -280,8 +313,9 @@ ResearchMate includes a complete test suite covering all modules:
 pytest tests/ -v
 ```
 
-### Verified Test Suite Summary (19 Passing Tests):
-- `tests/test_app_routes.py`: Verifies all 10 web routes and REST API endpoints.
+### Verified Test Suite Summary (36 Passing Tests):
+- `tests/test_auth.py`: Verifies user registration, password hashing, session login/logout, admin role enforcement for settings, profile view/update, and JWT token issuance/validation.
+- `tests/test_app_routes.py`: Verifies all frontend web routes and REST API endpoints across researcher and admin roles.
 - `tests/test_pdf_extractor.py`: Tests PyMuPDF document extraction, metadata retrieval, and page indexing.
 - `tests/test_rag_engine.py`: Verifies sliding window chunking, TF-IDF vectorization, cosine similarity, and top-k retrieval.
 - `tests/test_reference_formatter.py`: Validates APA 7th, IEEE, BibTeX, and RIS formatting rules.

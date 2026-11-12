@@ -104,19 +104,41 @@ def create_app(config_class=Config):
             db.session.add(default_proj)
             db.session.commit()
 
-        # Seed default academic researcher account if empty
-        if User.query.count() == 0:
-            demo_user = User(
+        # Seed default admin account if not present
+        admin_user = User.query.filter_by(username="admin").first()
+        if not admin_user:
+            admin_user = User(
+                username="admin",
+                email="admin@researchmate.org",
+                full_name="System Administrator",
+                institution="ResearchMate Core Team",
+                role="admin",
+            )
+            admin_user.set_password("Admin123!")
+            db.session.add(admin_user)
+            db.session.commit()
+            logger.info("Created default admin account (admin / Admin123!)")
+        elif admin_user.role != "admin":
+            admin_user.role = "admin"
+            db.session.commit()
+
+        # Seed default academic researcher account if not present
+        researcher_user = User.query.filter_by(username="researcher").first()
+        if not researcher_user:
+            researcher_user = User(
                 username="researcher",
                 email="researcher@researchmate.org",
                 full_name="Dr. Alex Rivera",
                 institution="Institute of Advanced Research",
-                role="Lead Researcher",
+                role="researcher",
             )
-            demo_user.set_password("Password123!")
-            db.session.add(demo_user)
+            researcher_user.set_password("Password123!")
+            db.session.add(researcher_user)
             db.session.commit()
             logger.info("Created default academic researcher account (researcher / Password123!)")
+        elif researcher_user.role != "researcher":
+            researcher_user.role = "researcher"
+            db.session.commit()
 
         # Populate vector store from existing chunks in database
         try:

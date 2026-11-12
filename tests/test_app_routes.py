@@ -21,8 +21,8 @@ def client(tmp_path):
 
 
 def test_views_load(client):
-    """Test that all 10 frontend web routes render successfully for logged in user."""
-    # Authenticate with seeded demo account
+    """Test that all frontend web routes render successfully for their authorized roles."""
+    # Authenticate with seeded researcher account
     login_res = client.post(
         "/login",
         data={"identity": "researcher", "password": "Password123!"},
@@ -30,7 +30,7 @@ def test_views_load(client):
     )
     assert login_res.status_code == 200
 
-    endpoints = [
+    researcher_endpoints = [
         "/",
         "/question-analyzer",
         "/search-papers",
@@ -40,12 +40,24 @@ def test_views_load(client):
         "/references",
         "/report-generator",
         "/history",
-        "/settings",
+        "/profile",
     ]
-    for ep in endpoints:
+    for ep in researcher_endpoints:
         response = client.get(ep)
         assert response.status_code == 200
         assert b"ResearchMate" in response.data
+
+    # Log in as admin to test the admin-only settings route
+    client.get("/logout")
+    admin_login = client.post(
+        "/login",
+        data={"identity": "admin", "password": "Admin123!"},
+        follow_redirects=True,
+    )
+    assert admin_login.status_code == 200
+    settings_res = client.get("/settings")
+    assert settings_res.status_code == 200
+    assert b"ResearchMate" in settings_res.data
 
 
 def test_api_status(client):

@@ -1,11 +1,24 @@
 """Template rendering views for ResearchMate."""
 
-from flask import Blueprint, render_template, current_app
+from functools import wraps
+from flask import Blueprint, render_template, current_app, flash, redirect, url_for
 from flask_login import login_required, current_user
 from database.models import Paper, LiteratureReview, ResearchGap, ReferenceItem, ReportDraft, Project
 from config import Config
 
 views_bp = Blueprint("views", __name__)
+
+
+def admin_required(f):
+    """Requires the logged-in user to have administrator privileges."""
+    @wraps(f)
+    @login_required
+    def decorated_function(*args, **kwargs):
+        if not current_user.is_authenticated or current_user.role != "admin":
+            flash("Administrator privileges required to access IBM watsonx.ai & Granite Settings.", "danger")
+            return redirect(url_for("views.dashboard"))
+        return f(*args, **kwargs)
+    return decorated_function
 
 
 @views_bp.route("/")
@@ -118,9 +131,30 @@ def history():
     return render_template("history.html", active_page="history")
 
 
-@views_bp.route("/settings")
+@views_bp.route("/profile")
 @login_required
+def profile():
+    """User profile, account details, and JWT token access."""
+    from services.jwt_auth import generate_jwt_token
+    token = generate_jwt_token(current_user)
+    papers_count = Paper.query.count()
+    reviews_count = LiteratureReview.query.count()
+    gaps_count = ResearchGap.query.count()
+    reports_count = ReportDraft.query.count()
+    return render_template(
+        "profile.html",
+        active_page="profile",
+        jwt_token=token,
+        papers_count=papers_count,
+        reviews_count=reviews_count,
+        gaps_count=gaps_count,
+        reports_count=reports_count,
+    )
+
+
+@views_bp.route("/settings")
+@admin_required
 def settings():
-    """IBM watsonx.ai & Granite configuration settings."""
+    """IBM watsonx.ai & Granite configuration settings (Admin Only)."""
     status = Config.get_watsonx_status()
     return render_template("settings.html", status=status, active_page="settings")
