@@ -1,20 +1,19 @@
-# ResearchMate – AI-Powered Research Agent
-### Intelligent Academic Research Platform Powered by IBM Granite & watsonx.ai
+# ResearchMate
+### Academic Research & Literature Discovery Platform
 
 [![Python](https://img.shields.io/badge/Python-3.12-blue.svg)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Framework-Flask%203.1-black.svg)](https://flask.palletsprojects.com/)
-[![IBM Granite](https://img.shields.io/badge/AI%20Model-IBM%20Granite%20watsonx.ai-0f62fe.svg)](https://www.ibm.com/granite)
 [![PyMuPDF](https://img.shields.io/badge/PDF%20Engine-PyMuPDF%20fitz-red.svg)](https://pymupdf.readthedocs.io/)
 [![Database](https://img.shields.io/badge/Database-SQLite%20SQLAlchemy-lightgrey.svg)](https://www.sqlite.org/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 ---
 
-## 1. Executive Summary & Problem Statement
+## 1. Executive Summary & Overview
 
-**ResearchMate** is a modern, modular, full-stack AI research assistant engineered to empower students, academic researchers, and scholars to conduct literature reviews, explore empirical research gaps, summarize scholarly papers, and generate structured 13-section research drafts with rigorous academic integrity.
+**ResearchMate** is a modern, modular, full-stack research assistant engineered to empower students, academic researchers, and scholars to conduct literature reviews, explore empirical research gaps, summarize scholarly papers, and generate structured 13-section research drafts with rigorous academic integrity.
 
-ResearchMate natively integrates **IBM Granite foundation models** via **IBM watsonx.ai** and incorporates a local, high-precision **Retrieval-Augmented Generation (RAG)** pipeline.
+ResearchMate incorporates an intelligent literature discovery engine and a local, high-precision **Retrieval-Augmented Generation (RAG)** pipeline.
 
 ### Core Objectives:
 1. **Deconstruct Natural-Language Queries:** Automatically formulate academic sub-questions, extract primary/secondary keywords, and assemble Boolean search strings.

@@ -99,7 +99,7 @@ def create_app(config_class=Config):
         if Project.query.count() == 0:
             default_proj = Project(
                 title="Default Research Project",
-                topic="AI-Powered Academic Research",
+                topic="Academic Literature Research",
                 description="Initial workspace for managing surveyed literature, RAG documents, and drafts.",
             )
             db.session.add(default_proj)

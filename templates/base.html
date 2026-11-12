@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{% block title %}ResearchMate – AI-Powered Research Agent{% endblock %}</title>
+  <title>{% block title %}ResearchMate – Academic Research Platform{% endblock %}</title>
   
   <!-- Google Fonts: Inter -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -28,10 +28,10 @@
           <i class="bi bi-mortarboard-fill text-primary fs-4"></i>
           <div>
             <h5 class="m-0 fw-bold tracking-tight text-white">ResearchMate</h5>
-            <small class="text-muted" style="font-size: 0.7rem;">AI Academic Agent</small>
+            <small class="text-muted" style="font-size: 0.7rem;">Academic Platform</small>
           </div>
         </div>
-        <span class="brand-badge">IBM Granite</span>
+        <span class="brand-badge">Workspace</span>
       </div>
     </div>
 
@@ -107,8 +107,8 @@
       <div class="d-flex align-items-center gap-2">
         <i class="bi bi-cpu text-info"></i>
         <div>
-          <div class="fw-semibold text-white" style="font-size: 0.75rem;">IBM Granite AI</div>
-          <div style="font-size: 0.68rem;">Academic Research Agent</div>
+          <div class="fw-semibold text-white" style="font-size: 0.75rem;">ResearchMate</div>
+          <div style="font-size: 0.68rem;">Academic Platform</div>
         </div>
       </div>
     </div>
@@ -129,14 +129,14 @@
 
       <div class="d-flex align-items-center gap-3">
         {% if watsonx_configured %}
-          <a href="{{ url_for('views.settings') }}" class="granite-status-pill active" title="IBM Granite is active and ready">
+          <a href="{{ url_for('views.settings') }}" class="granite-status-pill active" title="AI Engine is active and ready">
             <span class="status-dot active"></span>
-            <span>IBM Granite Connected</span>
+            <span>AI Connected</span>
           </a>
         {% else %}
-          <a href="{{ url_for('views.settings') }}" class="granite-status-pill warning" title="Configure IBM watsonx.ai credentials">
+          <a href="{{ url_for('views.settings') }}" class="granite-status-pill warning" title="Configure AI credentials">
             <span class="status-dot warning"></span>
-            <span>IBM Granite Setup Required</span>
+            <span>AI Setup Required</span>
           </a>
         {% endif %}
 
